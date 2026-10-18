@@ -79,10 +79,23 @@ int Shader::getStatus() {
     return status;
 }
 
+void Shader::setVec3(const char* name, float x, float y, float z) {
+    GLint loc = glGetUniformLocation(ID, name);
+    if (loc == -1) {
+        //std::cerr << "Error in Shader::setVec2: Uniform " << name << " not found\n";
+        return;
+    }
+    GLint prev = 0;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &prev);
+    if (prev != (GLint)ID) glUseProgram(ID);
+
+    glUniform3f(loc, x, y, z);
+}
+
 void Shader::setVec2(const char* name, float x, float y) {
     GLint loc = glGetUniformLocation(ID, name);
     if (loc == -1) {
-        std::cerr << "Error in Shader::setVec2: Uniform " << name << " not found\n";
+        //std::cerr << "Error in Shader::setVec2: Uniform " << name << " not found\n";
         return;
     }
     GLint prev = 0;
@@ -95,7 +108,7 @@ void Shader::setVec2(const char* name, float x, float y) {
 void Shader::setFloat(const char* name, float x) {
     GLint loc = glGetUniformLocation(ID, name);
     if (loc == -1) {
-        std::cerr << "Error in Shader::setFloat: Uniform " << name << " not found\n";
+        //std::cerr << "Error in Shader::setFloat: Uniform " << name << " not found\n";
         return;
     }
     GLint prev = 0;
@@ -103,4 +116,30 @@ void Shader::setFloat(const char* name, float x) {
     if (prev != (GLint)ID) glUseProgram(ID);
 
     glUniform1f(loc, x);
+}
+
+void Shader::setVec3(const char* name, glm::vec3 v) {
+    GLint loc = glGetUniformLocation(ID, name);
+    if (loc == -1) {
+        //std::cerr << "Error in Shader::setVec2: Uniform " << name << " not found\n";
+        return;
+    }
+    GLint prev = 0;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &prev);
+    if (prev != (GLint)ID) glUseProgram(ID);
+
+    glUniform3f(loc, v.x, v.y, v.z);
+}
+
+void Shader::setVec2(const char* name, glm::vec2 v) {
+    GLint loc = glGetUniformLocation(ID, name);
+    if (loc == -1) {
+        //std::cerr << "Error in Shader::setVec2: Uniform " << name << " not found\n";
+        return;
+    }
+    GLint prev = 0;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &prev);
+    if (prev != (GLint)ID) glUseProgram(ID);
+
+    glUniform2f(loc, v.x, v.y);
 }

@@ -1,10 +1,13 @@
 #version 460 core
 out vec4 fragColor;
 
-#define MAX_DISTANCE 50.0f
+#define MAX_DISTANCE 50.0
+#define EPSILON 0.001
 
 uniform float iTime;
 uniform vec2 iResolution;
+uniform vec3 iCameraPos;
+uniform vec3 iCameraRot;
 
 struct Object {
     vec4 data1;
@@ -21,12 +24,48 @@ float circle(vec2 uv, vec2 p, float r) {
     return step(pow(r, 2.0), dot(l, l));
 }
 
-float map(vec3 p) {
-    return length(p) - 1.0f;
+float sphereSDF(float r, vec3 p) {
+    return length(p) - r;
 }
 
-vec3 ray_march(vec3 ro, vec3 rd)
-{
+vec4 map(vec3 p) {
+    float d = MAX_DISTANCE;
+    vec3 col = vec3(0.0);
+
+    
+
+    float d1 = abs(p.y + 1.0);
+    col = mix(vec3(0.5), col, step(EPSILON, d1));
+    d = min(d, d1);
+
+    for (int i = 0; i < ObjectsData.items.length(); ++i) {
+        Object obj = ObjectsData.items[i];
+        int type = int(round(obj.data1.x));
+        vec3 lp = p - obj.data1.yzw;
+        vec4 baseCol = obj.data3;
+        float dx = MAX_DISTANCE;
+        //if (type == 0) {
+            dx = sphereSDF(obj.data2.x, lp);
+        //}
+        //baseCol.a = 0.5;
+        col = mix(baseCol.rgb, col, step(EPSILON, dx));
+        d = min(d, dx);
+    }
+
+    return vec4(col, d);
+}
+
+vec3 normal(vec3 p) {
+    const vec2 k = vec2(1.0, -1.0);
+    return normalize(
+        k.xyy * map(p + k.xyy * EPSILON).w +
+        k.yyx * map(p + k.yyx * EPSILON).w +
+        k.yxy * map(p + k.yxy * EPSILON).w +
+        k.xxx * map(p + k.xxx * EPSILON).w
+    );
+}
+
+vec4 ray_march(vec3 ro, vec3 rd) {
     vec3 p = vec3(0.0);
     vec3 col = vec3(0.5,0.5,0.5);
     float total_distance_traveled = 0.0;
@@ -34,32 +73,54 @@ vec3 ray_march(vec3 ro, vec3 rd)
     for (int i = 0; i < 1000; i++)
     {
         p = ro + total_distance_traveled * rd;
-        float d = map(p);
-        if (total_distance_traveled > MAX_DISTANCE || d < 0.001) {
+        float d = map(p).w;
+        if (total_distance_traveled > MAX_DISTANCE || d < EPSILON) {
             break;
         }
         total_distance_traveled += d;
     }
-    return p;
+    return vec4(p, total_distance_traveled);
+}
+
+float light(vec3 p) {
+    vec3 light_pos = vec3(0.5, 1.0, 0.5);
+    vec3 normal = normal(p);
+    return dot(normal, light_pos) * 0.5 + 0.5;
+}
+
+mat3 cameraRotation(vec3 deg) {
+    vec3 r = radians(deg);
+    float cp = cos(r.x), sp = sin(r.x);   // pitch
+    float cy = cos(r.y), sy = sin(r.y);   // yaw
+    float cr = cos(r.z), sr = sin(r.z);   // roll
+
+    // ВАЖНО: mat3 в GLSL задаётся ПО СТОЛБЦАМ
+    mat3 Rx = mat3(1.0, 0.0, 0.0,
+                   0.0,  cp,  sp,
+                   0.0, -sp,  cp);
+
+    mat3 Ry = mat3( cy, 0.0, -sy,
+                   0.0, 1.0, 0.0,
+                    sy, 0.0,  cy);
+
+    mat3 Rz = mat3( cr,  sr, 0.0,
+                   -sr,  cr, 0.0,
+                   0.0, 0.0, 1.0);
+
+    // порядок применения: сначала yaw, потом pitch, потом roll
+    return Rz * Rx * Ry;
 }
 
 void main() {
     vec2 uv = (gl_FragCoord.xy - iResolution.xy / 2.0) / min(iResolution.x, iResolution.y);
-    vec3 ro = vec3(0.0, 0.0, -5.0);
-    vec3 rd = vec3(uv, 1.0);
+    vec3 rd = normalize(vec3(uv, 1.0)) * cameraRotation(iCameraRot);
 
-    vec3 col = vec3(0.0, 0.0, 0.0);
-    
-    /*for (int i = 0; i < ObjectsData.items.length(); ++i) {
-        Object obj = ObjectsData.items[i];
-        float type = obj.data1.x;
-        vec3 pos = obj.data1.yzw;
-        vec4 baseCol = obj.data3;
-        col = mix(baseCol.rgb, col, circle(uv, pos.xy, 0.5));
-    }*/
+    vec3 col = vec3(0.0, 0.7, 1.0);
 
-    vec3 p = ray_march(ro, rd);
-    col = p;
+    vec4 p_d = ray_march(iCameraPos, rd);
+    if (p_d.w < MAX_DISTANCE) {
+        col = map(p_d.xyz).xyz * light(p_d.xyz);
+    }
 
 
     // Output to screen

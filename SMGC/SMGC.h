@@ -27,6 +27,9 @@
 // ObjectsBuffer and Object classes
 #include "ObjectsBuffer.h"
 
+// BEATIFUL!
+#include "paletts.h"
+
 class SMGC: public BaseComponent
 {
 public:
@@ -38,6 +41,7 @@ public:
     void pushObject(const Object& obj);
     void pushObject(Object&& obj);
     int draw();
+    int keyboard();
     int tick(long long tickCounter) override;
     void death() override;
 private:
@@ -54,6 +58,12 @@ private:
     std::vector<Object> Objects_B{};
 
     std::unique_ptr<ObjectsBuffer> objectsBuffer = nullptr;
+
+    glm::vec3 cameraPos = {0.0f, 0.0f, 0.0f};
+    glm::vec3 cameraRot = {0.0f, 0.0f, 0.0f};
+
+    float moveSpeed = 3.0f;
+    float rotSpeed  = 90.0f;
 
     int windowWidth  = 800;
     int windowHeight = 800;
