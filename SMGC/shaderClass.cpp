@@ -82,7 +82,7 @@ int Shader::getStatus() {
 void Shader::setVec2(const char* name, float x, float y) {
     GLint loc = glGetUniformLocation(ID, name);
     if (loc == -1) {
-        std::cerr << "Error in Shader::setVec2: Uniform " << name << "not found\n";
+        std::cerr << "Error in Shader::setVec2: Uniform " << name << " not found\n";
         return;
     }
     GLint prev = 0;
@@ -95,7 +95,7 @@ void Shader::setVec2(const char* name, float x, float y) {
 void Shader::setFloat(const char* name, float x) {
     GLint loc = glGetUniformLocation(ID, name);
     if (loc == -1) {
-        std::cerr << "Error in Shader::setFloat: Uniform " << name << "not found\n";
+        std::cerr << "Error in Shader::setFloat: Uniform " << name << " not found\n";
         return;
     }
     GLint prev = 0;

@@ -16,6 +16,9 @@ pkgs.mkShell {
     libGLU
     glfw
 
+    # GLM
+    glm
+
     # Дополнительные зависимости для GLFW (X11 и т.д.)
     libX11
     libXrandr

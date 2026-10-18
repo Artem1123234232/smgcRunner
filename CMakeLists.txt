@@ -24,6 +24,10 @@ find_package(glfw3 REQUIRED)
 set(OpenGL_GL_PREFERENCE GLVND)
 find_package(OpenGL REQUIRED)
 
+# --- GLM ---
+find_package(glm REQUIRED)
+
+
 add_executable(smgcRunner
   main.cpp
   #AndroidFix.cpp
@@ -38,6 +42,7 @@ add_executable(smgcRunner
   SMGC/VAO.h SMGC/VAO.cpp
   SMGC/VBO.h SMGC/VBO.cpp
   SMGC/EBO.h SMGC/EBO.cpp
+  SMGC/ObjectsBuffer.h SMGC/ObjectsBuffer.cpp
   SMGC/SMGC.h SMGC/SMGC.cpp
 )
 
@@ -45,6 +50,7 @@ target_link_libraries(smgcRunner PRIVATE
     glad
     glfw
     OpenGL::GL
+    glm::glm
 )
 
 include(GNUInstallDirs)

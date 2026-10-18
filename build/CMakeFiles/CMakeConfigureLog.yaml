@@ -6631,3 +6631,586 @@ events:
       CMAKE_SYSTEM_LIBRARY_PATH:
         - "/nix/store/rkiwrqh8g6gs5rws4bf1s3mrdcs15gm9-glibc-2.42-84/lib"
 ...
+
+---
+events:
+  -
+    kind: "find_package-v1"
+    backtrace:
+      - "CMakeLists.txt:28 (find_package)"
+    name: "glm"
+    configs:
+      -
+        filename: "glmConfig.cmake"
+        kind: "cmake"
+      -
+        filename: "glm-config.cmake"
+        kind: "cmake"
+    version_request:
+      exact: false
+    settings:
+      required: "required_explicit"
+      quiet: false
+      global: false
+      policy_scope: true
+      bypass_provider: false
+      names:
+        - "glm"
+      path_suffixes:
+        - ""
+      paths:
+        CMAKE_FIND_USE_CMAKE_PATH: true
+        CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+        CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+        CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+        CMAKE_FIND_USE_INSTALL_PREFIX: true
+        CMAKE_FIND_USE_PACKAGE_ROOT_PATH: true
+        CMAKE_FIND_USE_CMAKE_PACKAGE_REGISTRY: true
+        CMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY: true
+        CMAKE_FIND_ROOT_PATH_MODE: "BOTH"
+    candidates:
+      -
+        path: "/home/nixcli/C_Projects/C++/smgcRunner/build/CMakeFiles/pkgRedirects/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/nixcli/C_Projects/C++/smgcRunner/build/CMakeFiles/pkgRedirects/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/igij6pvja1yvldp3w5ydlpswqzwsr8s6-patchelf-0.15.2/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/igij6pvja1yvldp3w5ydlpswqzwsr8s6-patchelf-0.15.2/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/glpgfn5wqqvbq02jk18sdm3qxq41k2d5-update-autotools-gnu-config-scripts-hook/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/glpgfn5wqqvbq02jk18sdm3qxq41k2d5-update-autotools-gnu-config-scripts-hook/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/hbsz2ngi9ixbhd9na1xagh2yc8qnmj7y-gcc-wrapper-15.2.0/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/hbsz2ngi9ixbhd9na1xagh2yc8qnmj7y-gcc-wrapper-15.2.0/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/la0zcwbbm1jazcjqf80m49xfyj14k4b3-binutils-wrapper-2.46/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/la0zcwbbm1jazcjqf80m49xfyj14k4b3-binutils-wrapper-2.46/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/35brxn95hb55ss1h9vj2kjxwsrsakylk-cmake-4.1.6/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/35brxn95hb55ss1h9vj2kjxwsrsakylk-cmake-4.1.6/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/8w5py73f81yixkqkzq0w3f2w90326fkr-pkg-config-wrapper-0.29.2/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/8w5py73f81yixkqkzq0w3f2w90326fkr-pkg-config-wrapper-0.29.2/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/ab5kmdi25sdwby91zz7n80kmx4kmjh67-glfw-3.4-dev/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/ab5kmdi25sdwby91zz7n80kmx4kmjh67-glfw-3.4-dev/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/2vvzfir1v357j5qfqfqv5zclklln5lp2-libglvnd-1.7.0-dev/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/2vvzfir1v357j5qfqfqv5zclklln5lp2-libglvnd-1.7.0-dev/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/ji9sy2cadldwn33hm0aiiq8jld29rbq5-libglvnd-1.7.0/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/ji9sy2cadldwn33hm0aiiq8jld29rbq5-libglvnd-1.7.0/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/fs5ac9zhj5wcm9vhzan9l7a4plgnczl0-glfw-3.4/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/fs5ac9zhj5wcm9vhzan9l7a4plgnczl0-glfw-3.4/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/f4vkd1l8s292z8z40vpgw9hyz63q8dkm-glu-9.0.3-dev/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/f4vkd1l8s292z8z40vpgw9hyz63q8dkm-glu-9.0.3-dev/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/450mrbh6bp5m0f9g4llc7h8z5pcr0wkz-glu-9.0.3/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/450mrbh6bp5m0f9g4llc7h8z5pcr0wkz-glu-9.0.3/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/gi5xksz4gd77q6rhvsaids0jbkxdpk0d-libx11-1.8.13-dev/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/gi5xksz4gd77q6rhvsaids0jbkxdpk0d-libx11-1.8.13-dev/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/2xc76y8jf3wnazrvmqc7ivc811jpx6q3-xorgproto-2025.1/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/2xc76y8jf3wnazrvmqc7ivc811jpx6q3-xorgproto-2025.1/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/2g9xwk5kis01003gynr7xfca667dpgv8-libx11-1.8.13/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/2g9xwk5kis01003gynr7xfca667dpgv8-libx11-1.8.13/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/f1hgjrhpi5ixh7y1m1w8iv0daysg01xs-libxrandr-1.5.5-dev/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/f1hgjrhpi5ixh7y1m1w8iv0daysg01xs-libxrandr-1.5.5-dev/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/f3p9hzcrcz6ifsv8ipw1nmxsns3m1ij9-libxrender-0.9.12-dev/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/f3p9hzcrcz6ifsv8ipw1nmxsns3m1ij9-libxrender-0.9.12-dev/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/ibda7wki9fzqzwijp0d3857igk98is81-libxrender-0.9.12/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/ibda7wki9fzqzwijp0d3857igk98is81-libxrender-0.9.12/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/f7cisjakdl16hgfzxz7crhc95r7spmxy-libxrandr-1.5.5/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/f7cisjakdl16hgfzxz7crhc95r7spmxy-libxrandr-1.5.5/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/5ry9xdy9rplksmvapz784p6yibls8al1-libxcursor-1.2.3-dev/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/5ry9xdy9rplksmvapz784p6yibls8al1-libxcursor-1.2.3-dev/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/b35ckvyhs8r35s6wvgc6zzcq821a4bdi-libxcursor-1.2.3/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/b35ckvyhs8r35s6wvgc6zzcq821a4bdi-libxcursor-1.2.3/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/fki3lrr5p5741sgr4b7yzrja236rh4km-libxi-1.8.3-dev/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/fki3lrr5p5741sgr4b7yzrja236rh4km-libxi-1.8.3-dev/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/rr5a618vbixmy0x7d8agh44rwa186svg-libxext-1.3.7-dev/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/rr5a618vbixmy0x7d8agh44rwa186svg-libxext-1.3.7-dev/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/m0vfslgsirkxkha7s1i37ydqcf07vsjm-libxau-1.0.12-dev/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/m0vfslgsirkxkha7s1i37ydqcf07vsjm-libxau-1.0.12-dev/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/1w9qgjv9pcmgqmlzrdc0qml4nfsp5p2f-libxau-1.0.12/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/1w9qgjv9pcmgqmlzrdc0qml4nfsp5p2f-libxau-1.0.12/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/c9asg9zdzspijnqay6jz1ddsxpaa2dvw-libxext-1.3.7/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/c9asg9zdzspijnqay6jz1ddsxpaa2dvw-libxext-1.3.7/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/251ijhk6qqbhivknb104xl7sapcg2a2c-libxfixes-6.0.2-dev/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/251ijhk6qqbhivknb104xl7sapcg2a2c-libxfixes-6.0.2-dev/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/16qnzpcnv6fy8h463744vrn0g4cpx86r-libxfixes-6.0.2/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/16qnzpcnv6fy8h463744vrn0g4cpx86r-libxfixes-6.0.2/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/gc2vc89xbjb59lyci28rwsz0hz5j1drz-libxi-1.8.3/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/gc2vc89xbjb59lyci28rwsz0hz5j1drz-libxi-1.8.3/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/ban38kbr1ixg00wg5f0jwz6z6vcmdg8x-libxinerama-1.1.6-dev/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/ban38kbr1ixg00wg5f0jwz6z6vcmdg8x-libxinerama-1.1.6-dev/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/abb82846ndc6rjjcc0ybvqn5wshh7dhn-libxinerama-1.1.6/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/abb82846ndc6rjjcc0ybvqn5wshh7dhn-libxinerama-1.1.6/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/2vhzbwl700sah6wd97k56pndyi5qhq2h-glib-2.88.3-bin/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/2vhzbwl700sah6wd97k56pndyi5qhq2h-glib-2.88.3-bin/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/63g104xwbzfpcq0h7c99w19m6j9ly3p1-gawk-5.4.1/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/63g104xwbzfpcq0h7c99w19m6j9ly3p1-gawk-5.4.1/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/3668q0d9zhc5n9l2pnyvpd44kz9bjsjm-gnugrep-3.12/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/3668q0d9zhc5n9l2pnyvpd44kz9bjsjm-gnugrep-3.12/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/1ggxndc1gd5061j5hqprhnhx9p30yilv-gnused-4.10/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/1ggxndc1gd5061j5hqprhnhx9p30yilv-gnused-4.10/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/2gfxiwls9hbgwdwcy43mprchwsq36mg6-coreutils-9.11/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/2gfxiwls9hbgwdwcy43mprchwsq36mg6-coreutils-9.11/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/mdwxdimw26b72k7wign651n8clh4jzii-which-2.25/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/mdwxdimw26b72k7wign651n8clh4jzii-which-2.25/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/v9w4gj4rdwljz961allizcg6xzqvniri-getconf-glibc-2.44-25/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/v9w4gj4rdwljz961allizcg6xzqvniri-getconf-glibc-2.44-25/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/yisa2lg79zcvgk4ck4yr6r0lz6j63hs3-bash-interactive-5.3p9/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/yisa2lg79zcvgk4ck4yr6r0lz6j63hs3-bash-interactive-5.3p9/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/6hjng4hd5c688hjgdcyb1rzfjz220srh-gcc-15.2.0/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/6hjng4hd5c688hjgdcyb1rzfjz220srh-gcc-15.2.0/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/389a70m1z11xiz1b5b4gawz1z7w085rh-glibc-2.42-84-bin/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/389a70m1z11xiz1b5b4gawz1z7w085rh-glibc-2.42-84-bin/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/61685rbaxmpigwi3z23i33sv3jyfl70q-coreutils-9.11/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/61685rbaxmpigwi3z23i33sv3jyfl70q-coreutils-9.11/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/63wdfxcylc7rzym8iwhv84yppg8gj3vv-binutils-2.46/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/63wdfxcylc7rzym8iwhv84yppg8gj3vv-binutils-2.46/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/n82li8za1mykdpj921c0v4f7dr7f6vba-findutils-4.10.0/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/n82li8za1mykdpj921c0v4f7dr7f6vba-findutils-4.10.0/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/1cnqsbklqng87a7hx5w3adz42n2y70pi-diffutils-3.12/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/1cnqsbklqng87a7hx5w3adz42n2y70pi-diffutils-3.12/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/cwr0fxlfy7jzfxwz2wyhd30a3bzw7vx1-gnused-4.10/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/cwr0fxlfy7jzfxwz2wyhd30a3bzw7vx1-gnused-4.10/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/x3mmarawk8qkqf3257aidf7cljax6mc8-gnugrep-3.12/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/x3mmarawk8qkqf3257aidf7cljax6mc8-gnugrep-3.12/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/l048yqk8sv2lpz14ww39bqc3vzcmlz6m-gawk-5.4.1/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/l048yqk8sv2lpz14ww39bqc3vzcmlz6m-gawk-5.4.1/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/plpn1m2r90invcrdw48kdrl65q379sq2-gnutar-1.35/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/plpn1m2r90invcrdw48kdrl65q379sq2-gnutar-1.35/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/4fp03lf9dal1jcpa5fr3ayjq7ff1bkji-gzip-1.14/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/4fp03lf9dal1jcpa5fr3ayjq7ff1bkji-gzip-1.14/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/kk9ka2nhq5vr4yaanz865kryj88gbiik-bzip2-1.0.8-bin/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/kk9ka2nhq5vr4yaanz865kryj88gbiik-bzip2-1.0.8-bin/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/jrf0jzrrgiqxhk2kzc7qvc9qpivm86ns-gnumake-4.4.1/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/jrf0jzrrgiqxhk2kzc7qvc9qpivm86ns-gnumake-4.4.1/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/axl12yr00f105bjqvj628f5f0s6r0cnp-bash-5.3p9/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/axl12yr00f105bjqvj628f5f0s6r0cnp-bash-5.3p9/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/cfw0pgnnldg564qgz12nb60wbnq7rmc6-patch-2.8/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/cfw0pgnnldg564qgz12nb60wbnq7rmc6-patch-2.8/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/8373r1712mm8arv96fxznzsxm7bdvqm4-xz-5.8.3-bin/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/8373r1712mm8arv96fxznzsxm7bdvqm4-xz-5.8.3-bin/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/3wbppfzpwj9kwkfrx9bkg99fbmr49p9q-file-5.47/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/3wbppfzpwj9kwkfrx9bkg99fbmr49p9q-file-5.47/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/lhp0pmfz2hdgdpqa2663n0i1z2xbvrq5-xdg-user-dirs-0.20/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/nix/store/lhp0pmfz2hdgdpqa2663n0i1z2xbvrq5-xdg-user-dirs-0.20/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/run/wrappers/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/run/wrappers/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/var/lib/flatpak/exports/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/var/lib/flatpak/exports/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/nixcli/.nix-profile/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/nixcli/.nix-profile/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/run/current-system/sw/glmConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/run/current-system/sw/glm-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+    found: null
+    search_context:
+      ENV{PATH}:
+        - "/nix/store/2vhzbwl700sah6wd97k56pndyi5qhq2h-glib-2.88.3-bin/bin"
+        - "/nix/store/63g104xwbzfpcq0h7c99w19m6j9ly3p1-gawk-5.4.1/bin"
+        - "/nix/store/3668q0d9zhc5n9l2pnyvpd44kz9bjsjm-gnugrep-3.12/bin"
+        - "/nix/store/1ggxndc1gd5061j5hqprhnhx9p30yilv-gnused-4.10/bin"
+        - "/nix/store/2gfxiwls9hbgwdwcy43mprchwsq36mg6-coreutils-9.11/bin"
+        - "/nix/store/mdwxdimw26b72k7wign651n8clh4jzii-which-2.25/bin"
+        - "/nix/store/v9w4gj4rdwljz961allizcg6xzqvniri-getconf-glibc-2.44-25/bin"
+        - "/nix/store/yisa2lg79zcvgk4ck4yr6r0lz6j63hs3-bash-interactive-5.3p9/bin"
+        - "/nix/store/igij6pvja1yvldp3w5ydlpswqzwsr8s6-patchelf-0.15.2/bin"
+        - "/nix/store/hbsz2ngi9ixbhd9na1xagh2yc8qnmj7y-gcc-wrapper-15.2.0/bin"
+        - "/nix/store/6hjng4hd5c688hjgdcyb1rzfjz220srh-gcc-15.2.0/bin"
+        - "/nix/store/389a70m1z11xiz1b5b4gawz1z7w085rh-glibc-2.42-84-bin/bin"
+        - "/nix/store/61685rbaxmpigwi3z23i33sv3jyfl70q-coreutils-9.11/bin"
+        - "/nix/store/la0zcwbbm1jazcjqf80m49xfyj14k4b3-binutils-wrapper-2.46/bin"
+        - "/nix/store/63wdfxcylc7rzym8iwhv84yppg8gj3vv-binutils-2.46/bin"
+        - "/nix/store/35brxn95hb55ss1h9vj2kjxwsrsakylk-cmake-4.1.6/bin"
+        - "/nix/store/8w5py73f81yixkqkzq0w3f2w90326fkr-pkg-config-wrapper-0.29.2/bin"
+        - "/nix/store/61685rbaxmpigwi3z23i33sv3jyfl70q-coreutils-9.11/bin"
+        - "/nix/store/n82li8za1mykdpj921c0v4f7dr7f6vba-findutils-4.10.0/bin"
+        - "/nix/store/1cnqsbklqng87a7hx5w3adz42n2y70pi-diffutils-3.12/bin"
+        - "/nix/store/cwr0fxlfy7jzfxwz2wyhd30a3bzw7vx1-gnused-4.10/bin"
+        - "/nix/store/x3mmarawk8qkqf3257aidf7cljax6mc8-gnugrep-3.12/bin"
+        - "/nix/store/l048yqk8sv2lpz14ww39bqc3vzcmlz6m-gawk-5.4.1/bin"
+        - "/nix/store/plpn1m2r90invcrdw48kdrl65q379sq2-gnutar-1.35/bin"
+        - "/nix/store/4fp03lf9dal1jcpa5fr3ayjq7ff1bkji-gzip-1.14/bin"
+        - "/nix/store/kk9ka2nhq5vr4yaanz865kryj88gbiik-bzip2-1.0.8-bin/bin"
+        - "/nix/store/jrf0jzrrgiqxhk2kzc7qvc9qpivm86ns-gnumake-4.4.1/bin"
+        - "/nix/store/axl12yr00f105bjqvj628f5f0s6r0cnp-bash-5.3p9/bin"
+        - "/nix/store/cfw0pgnnldg564qgz12nb60wbnq7rmc6-patch-2.8/bin"
+        - "/nix/store/8373r1712mm8arv96fxznzsxm7bdvqm4-xz-5.8.3-bin/bin"
+        - "/nix/store/3wbppfzpwj9kwkfrx9bkg99fbmr49p9q-file-5.47/bin"
+        - "/nix/store/lhp0pmfz2hdgdpqa2663n0i1z2xbvrq5-xdg-user-dirs-0.20/bin"
+        - "/run/wrappers/bin"
+        - "/home/nixcli/.local/share/flatpak/exports/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/home/nixcli/.nix-profile/bin"
+        - "/nix/profile/bin"
+        - "/home/nixcli/.local/state/nix/profile/bin"
+        - "/etc/profiles/per-user/nixcli/bin"
+        - "/nix/var/nix/profiles/default/bin"
+        - "/run/current-system/sw/bin"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "/nix/store/35brxn95hb55ss1h9vj2kjxwsrsakylk-cmake-4.1.6"
+        - "/usr/local"
+...

@@ -23,8 +23,8 @@ CMAKE_AR:FILEPATH=/run/current-system/sw/bin/ar
 //No help, variable specified on the command line.
 CMAKE_BUILD_TYPE:STRING=Debug
 
-//CXX compiler
-CMAKE_CXX_COMPILER:STRING=/run/current-system/sw/bin/g++
+//No help, variable specified on the command line.
+CMAKE_CXX_COMPILER:FILEPATH=/run/current-system/sw/bin/g++
 
 //A wrapper around 'ar' adding the appropriate '--plugin' option
 // for the GCC compiler
@@ -49,8 +49,8 @@ CMAKE_CXX_FLAGS_RELEASE:STRING=-O3 -DNDEBUG
 //Flags used by the CXX compiler during RELWITHDEBINFO builds.
 CMAKE_CXX_FLAGS_RELWITHDEBINFO:STRING=-O2 -g -DNDEBUG
 
-//C compiler
-CMAKE_C_COMPILER:STRING=/run/current-system/sw/bin/gcc
+//No help, variable specified on the command line.
+CMAKE_C_COMPILER:FILEPATH=/run/current-system/sw/bin/gcc
 
 //A wrapper around 'ar' adding the appropriate '--plugin' option
 // for the GCC compiler
@@ -306,6 +306,9 @@ OPENGL_xmesa_INCLUDE_DIR:PATH=OPENGL_xmesa_INCLUDE_DIR-NOTFOUND
 
 //The directory containing a CMake configuration file for glfw3.
 glfw3_DIR:PATH=/nix/store/ab5kmdi25sdwby91zz7n80kmx4kmjh67-glfw-3.4-dev/lib/cmake/glfw3
+
+//The directory containing a CMake configuration file for glm.
+glm_DIR:PATH=/nix/store/ax6v2h6x04fgq4gg4xmiw573hdl8iaiv-glm-1.0.2/share/glm
 
 //Value Computed by CMake
 smgcRunner_BINARY_DIR:STATIC=/home/nixcli/C_Projects/C++/smgcRunner/build

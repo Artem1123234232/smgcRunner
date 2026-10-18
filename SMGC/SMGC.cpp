@@ -21,6 +21,10 @@ GLuint indices[] = {
     2, 3, 0
 };
 
+std::vector<Object> Objects = {
+    {{0.0f, 0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 0.0f}, {1.0f, 0.5f, 0.2f, 1.0f}}
+};
+
 SMGC::SMGC() : BaseComponent("SMGC") {
     // Constructor
 }
@@ -77,8 +81,12 @@ int SMGC::init() {
     ebo = std::make_unique<EBO>(indices, sizeof(indices));
     if (!ebo) {std::cerr << getPrefix() << "Critical Error: ebo is nullptr" << std::endl; return -ENODEV;}
 
-    vao->LinkVBO(*vbo, 0);
+    objectsBuffer = std::make_unique<ObjectsBuffer>();
+    if (!objectsBuffer) {std::cerr << getPrefix() << "Critical Error: objectsBuffer is nullptr" << std::endl; return -ENODEV;}
+    objectsBuffer->Bind(0);
 
+    vao->LinkVBO(*vbo, 0);
+    
     vao->Unbind();
     vbo->Unbind();
     ebo->Unbind();
@@ -94,11 +102,14 @@ int SMGC::tick(long long tickCounter) {
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
+        if (!objectsBuffer) {std::cerr << getPrefix() << "Critical Error: objectsBuffer is nullptr" << std::endl; return -ENODEV;}
+        objectsBuffer->Upload(Objects);
+
         if (!shaderProgram) {std::cerr << getPrefix() << "Critical Error: shaderProgram is nullptr" << std::endl; return -ENODEV;}
         shaderProgram->Activate();
         shaderProgram->setFloat("iTime", float(tickCounter) / float(Core_getTPS()));
         shaderProgram->setVec2("iResolution", float(windowWidth), float(windowHeight));
-
+        
         if (!vao) {std::cerr << getPrefix() << "Critical Error: vao is nullptr" << std::endl; return -ENODEV;}
         vao->Bind();
 
@@ -115,6 +126,7 @@ void SMGC::death() {
     if (vbo) vbo->Delete();
     if (ebo) ebo->Delete();
     if (shaderProgram) shaderProgram->Delete();
+    if (objectsBuffer) objectsBuffer->Delete();
     if (window) glfwDestroyWindow(window);
     glfwTerminate();
     Core_stop();

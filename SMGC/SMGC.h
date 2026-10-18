@@ -15,11 +15,17 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+// Vec math
+#include <glm/glm.hpp>
+
 // Opengl classes
 #include "shaderClass.h"
 #include "VAO.h"
 #include "VBO.h"
 #include "EBO.h"
+
+// ObjectsBuffer and Object classes
+#include "ObjectsBuffer.h"
 
 class SMGC: public BaseComponent
 {
@@ -36,6 +42,8 @@ private:
     std::unique_ptr<VAO> vao = nullptr;
     std::unique_ptr<VBO> vbo = nullptr;
     std::unique_ptr<EBO> ebo = nullptr;
+
+    std::unique_ptr<ObjectsBuffer> objectsBuffer = nullptr;
 
     int windowWidth  = 800;
     int windowHeight = 800;
