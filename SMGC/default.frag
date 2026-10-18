@@ -25,15 +25,46 @@ float circle(vec2 uv, vec2 p, float r) {
     return step(pow(r, 2.0), dot(l, l));
 }
 
+float crossSDF(in vec3 p) {
+    float da = max(abs(p.x), abs(p.y));
+    float db = max(abs(p.y), abs(p.z));
+    float dc = max(abs(p.z), abs(p.x));
+    return min(da, min(db, dc)) - 1.0;
+}
+
+float boxSDF(vec3 p, vec3 b) {
+    vec3 q = abs(p) - b;
+    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+}
+
 float sphereSDF(float r, vec3 p) {
     return length(p) - r;
+}
+
+float mengerSpongeSDF(float radius, vec3 p) {
+    vec3 q = p / radius;
+
+    vec3 d = abs(q) - vec3(1.0);
+    float dist = min(max(d.x, max(d.y, d.z)), 0.0) + length(max(d, 0.0));
+
+    float scale = 1.0;
+    for (int i = 0; i < 4; i++) {
+        vec3 a = mod(q * scale, 2.0) - 1.0;
+        scale *= 3.0;
+        vec3 r = abs(1.0 - 3.0 * abs(a));
+
+        float c = crossSDF(r) / scale;
+        dist = max(dist, c);
+    }
+
+    return dist * radius;
 }
 
 vec4 map(vec3 p) {
     float d = MAX_DISTANCE;
     vec3 col = vec3(0.0);
 
-    float d1 = abs(p.y + 1.0);
+    float d1 = p.y + 1.0;
     col = mix(vec3(0.333), col, step(EPSILON, d1));
     d = min(d, d1);
 
@@ -43,9 +74,12 @@ vec4 map(vec3 p) {
         vec3 lp = p - obj.data1.yzw;
         vec4 baseCol = obj.data3;
         float dx = MAX_DISTANCE;
-        //if (type == 0) {
+        if (type == -1) {
+            dx = mengerSpongeSDF(obj.data2.x, lp);
+        }
+        else if (type == 0) {
             dx = sphereSDF(obj.data2.x, lp);
-        //}
+        }
         //baseCol.a = 0.5;
         col = mix(baseCol.rgb, col, step(EPSILON, dx));
         d = min(d, dx);
@@ -81,7 +115,7 @@ float raymarchLight(vec3 ro, vec3 rd) {
 }
 
 float light(vec3 p) {
-    vec3 light_pos = vec3(1.0, 2.0, 1.0);
+    vec3 light_pos = vec3(1.0, 2.0, 0.5);
     vec3 l = normalize(light_pos - p);
     vec3 normal = normal(p);
     float lambert = clamp(dot(normal, l) * 0.5 + 0.5, 0.0, 1.0);
@@ -148,6 +182,10 @@ void main() {
     vec3 rd = normalize(vec3(uv, 1.0)) * cameraRotation(iCameraRot);
 
     vec3 col = raymarch(iCameraPos, rd);
+
+    // Дизеринг
+    float noise = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
+    col += (noise - 0.5) / 255.0;
 
     // Output to screen
     fragColor = vec4(col, 1.0);

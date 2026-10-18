@@ -191,7 +191,8 @@ int SMGC::tick(long long tickCounter) {
         clearObjects();
         float m = (sin(float(tickCounter) / float(Core_getTPS()) * 2.0f)) * 0.5f + 0.5f;
         glm::vec3 col = PaletteCosinka(m);
-        pushObject({{0.0f, m, m, m}, {0.5f, 0.0f, 0.0f, 0.0f}, {col.x, col.y, col.z, 1.0f}});
+        pushObject({{0.0f, m, m, 0.0f}, {0.5f, 0.0f, 0.0f, 0.0f}, {col.x, col.y, col.z, 1.0f}});
+        pushObject({{-1.0f, 0.5f, 0.0f, 1.5f}, {0.5f, 0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 0.2f, 1.0f}});
         swapObjects();
     }
     return 0;
