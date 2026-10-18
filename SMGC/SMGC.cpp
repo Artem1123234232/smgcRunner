@@ -99,13 +99,13 @@ void SMGC::swapObjects() {
     std::swap(Objects_A, Objects_B);
 }
 void SMGC::clearObjects() {
-    std::vector<Object>().swap(Objects_A);
+    std::vector<Object>().swap(Objects_B);
 }
 void SMGC::pushObject(const Object& obj) {
-    Objects_A.push_back(obj);
+    Objects_B.push_back(obj);
 }
 void SMGC::pushObject(Object&& obj) {
-    Objects_A.push_back(std::move(obj));
+    Objects_B.push_back(std::move(obj));
 }
 
 int SMGC::draw() {
@@ -141,10 +141,10 @@ int SMGC::tick(long long tickCounter) {
         glfwPollEvents();
     }
     if (tickCounter % 1 == 0) {
-        swapObjects();
         clearObjects();
         float m = (sin(float(tickCounter) / float(Core_getTPS()) * 2.0f)) * 0.5f + 0.5f;
         pushObject({{0.0f, m, m, m}, {0.0f, 0.0f, 0.0f, 0.0f}, {1.0f * m, 0.5f * m, 0.2f * m, 1.0f}});
+        swapObjects();
     }
     return 0;
 }

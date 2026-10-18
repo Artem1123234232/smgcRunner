@@ -128,7 +128,6 @@ vec3 ray_march(in vec3 ro, in vec3 rd)
         }
     }
     return col;
-
 }
 void main()
 {
