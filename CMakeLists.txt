@@ -43,6 +43,7 @@ add_executable(smgcRunner
   SMGC/VBO.h SMGC/VBO.cpp
   SMGC/EBO.h SMGC/EBO.cpp
   SMGC/ObjectsBuffer.h SMGC/ObjectsBuffer.cpp
+  SMGC/paletts.h SMGC/paletts.cpp
   SMGC/SMGC.h SMGC/SMGC.cpp
 )
 

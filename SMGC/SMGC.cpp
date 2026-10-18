@@ -26,16 +26,16 @@ SMGC::SMGC() : BaseComponent("SMGC") {
 }
 
 int SMGC::init() {
+    glfwSetErrorCallback([](int error, const char* desc){
+        std::cerr << "GLFW Error " << error << ": " << desc << "\n";
+    });
+
     glfwInit();
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-
-    glfwSetErrorCallback([](int error, const char* desc){
-        std::cerr << "GLFW Error " << error << ": " << desc << "\n";
-    });
 
     window = glfwCreateWindow(windowWidth, windowHeight, "SMGC", NULL, NULL);
     if (!window) {
@@ -58,7 +58,7 @@ int SMGC::init() {
     });
 
     int errorCode = gladLoadGL();
-    if (errorCode == 0) {std::cerr << getPrefix() << "Critical Error: gladLoadGL failed, return code " << std::to_string(errorCode) << std::endl; return errorCode;}
+    if (errorCode == 0) {std::cerr << getPrefix() << "Critical Error: gladLoadGL failed, return code " << std::to_string(errorCode) << std::endl; return -ENODEV;}
     std::clog << getPrefix() << "GL: " << glGetString(GL_VERSION) << "\n";
 
     glViewport(0, 0, windowWidth, windowHeight);
@@ -92,7 +92,6 @@ int SMGC::init() {
 }
 
 void SMGC::windowResize() {
-    draw();
 }
 
 void SMGC::swapObjects() {

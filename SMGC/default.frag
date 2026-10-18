@@ -1,6 +1,7 @@
 #version 460 core
 out vec4 fragColor;
 
+#define ITERATIONS 1000
 #define MAX_DISTANCE 50.0
 #define EPSILON 0.001
 
@@ -32,10 +33,8 @@ vec4 map(vec3 p) {
     float d = MAX_DISTANCE;
     vec3 col = vec3(0.0);
 
-    
-
     float d1 = abs(p.y + 1.0);
-    col = mix(vec3(0.5), col, step(EPSILON, d1));
+    col = mix(vec3(0.333), col, step(EPSILON, d1));
     d = min(d, d1);
 
     for (int i = 0; i < ObjectsData.items.length(); ++i) {
@@ -65,27 +64,60 @@ vec3 normal(vec3 p) {
     );
 }
 
-vec4 ray_march(vec3 ro, vec3 rd) {
-    vec3 p = vec3(0.0);
-    vec3 col = vec3(0.5,0.5,0.5);
-    float total_distance_traveled = 0.0;
-    bool water = false;
-    for (int i = 0; i < 1000; i++)
+float raymarchLight(vec3 ro, vec3 rd) {
+    float dO = 0.0;
+    float md = 1.0;
+    for (int i = 0; i < 20; i++)
     {
-        p = ro + total_distance_traveled * rd;
-        float d = map(p).w;
-        if (total_distance_traveled > MAX_DISTANCE || d < EPSILON) {
+        vec3 p = ro + rd * dO;
+        float dS = map(p).w;
+        md = min(md, dS);
+        dO += dS;
+        if (dO > 50.0 || dS < 0.1) {
             break;
         }
-        total_distance_traveled += d;
     }
-    return vec4(p, total_distance_traveled);
+    return md;
 }
 
 float light(vec3 p) {
-    vec3 light_pos = vec3(0.5, 1.0, 0.5);
+    vec3 light_pos = vec3(1.0, 2.0, 1.0);
+    vec3 l = normalize(light_pos - p);
     vec3 normal = normal(p);
-    return dot(normal, light_pos) * 0.5 + 0.5;
+    float lambert = clamp(dot(normal, l) * 0.5 + 0.5, 0.0, 1.0);
+    float shadow = clamp(raymarchLight(p + normal, l) + 1.0, 0.0, 1.0);
+    return lambert * shadow;
+}
+
+vec3 calcColor(vec3 p, vec3 ro, int i, float d) {
+    // base color
+    vec3 col = map(p).xyz;
+
+    // light
+    col *= light(p);
+
+    // ambient occlusion
+    col *= pow(1.0 - (float(i) / float(ITERATIONS) * 2.0), 2.0);
+
+    // fog
+    float fog = pow(clamp(distance(p, ro) / MAX_DISTANCE, 0.0, 1.0), 2.0);
+    col = col * (1.0 - fog) + 0.28 * fog;
+    
+    return col;
+}
+
+vec3 raymarch(vec3 ro, vec3 rd) {
+    float total_distance_traveled = 0.0;
+    for (int i = 0; i < ITERATIONS; i++)
+    {
+        vec3 p = ro + total_distance_traveled * rd;
+        float d = map(p).w;
+        if (total_distance_traveled > MAX_DISTANCE || d < EPSILON) {
+            return calcColor(p, ro, i, d);
+        }
+        total_distance_traveled += d;
+    }
+    return vec3(0.0);
 }
 
 mat3 cameraRotation(vec3 deg) {
@@ -115,14 +147,8 @@ void main() {
     vec2 uv = (gl_FragCoord.xy - iResolution.xy / 2.0) / min(iResolution.x, iResolution.y);
     vec3 rd = normalize(vec3(uv, 1.0)) * cameraRotation(iCameraRot);
 
-    vec3 col = vec3(0.0, 0.7, 1.0);
-
-    vec4 p_d = ray_march(iCameraPos, rd);
-    if (p_d.w < MAX_DISTANCE) {
-        col = map(p_d.xyz).xyz * light(p_d.xyz);
-    }
-
+    vec3 col = raymarch(iCameraPos, rd);
 
     // Output to screen
-    fragColor = vec4(col,1.0);
+    fragColor = vec4(col, 1.0);
 }
