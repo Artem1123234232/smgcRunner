@@ -1,0 +1,16 @@
+// Object
+1)
+Object type
+pos x
+pos y
+pos z
+2)
+radius / size x / radius
+null / size y / angle x
+null / size z / angle y
+null / null / length
+3)
+baseCol_R
+baseCol_G
+baseCol_B
+baseCol_A

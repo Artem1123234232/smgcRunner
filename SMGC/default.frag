@@ -27,8 +27,11 @@ void main() {
     vec3 col = vec3(0.0, 0.0, 0.0);
     
     for (int i = 0; i < ObjectsData.items.length(); ++i) {
-        vec4 baseCol = ObjectsData.items[i].data3;
-        col = mix(baseCol.rgb, col, circle(uv, vec2(0.5), 0.5));
+        Object obj = ObjectsData.items[i];
+        float type = obj.data1.x;
+        vec3 pos = obj.data1.yzw;
+        vec4 baseCol = obj.data3;
+        col = mix(baseCol.rgb, col, circle(uv, pos.xy, 0.5));
     }
 
 

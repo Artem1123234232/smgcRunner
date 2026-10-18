@@ -32,16 +32,26 @@ class SMGC: public BaseComponent
 public:
     SMGC();
     int init() override;
+    void windowResize();
+    void swapObjects();
+    void clearObjects();
+    void pushObject(const Object& obj);
+    void pushObject(Object&& obj);
+    int draw();
     int tick(long long tickCounter) override;
     void death() override;
 private:
     GLFWwindow* window = nullptr;
+    long long localTickCounter = 0;
     
     std::unique_ptr<Shader> shaderProgram = nullptr;
 
     std::unique_ptr<VAO> vao = nullptr;
     std::unique_ptr<VBO> vbo = nullptr;
     std::unique_ptr<EBO> ebo = nullptr;
+
+    std::vector<Object> Objects_A{};
+    std::vector<Object> Objects_B{};
 
     std::unique_ptr<ObjectsBuffer> objectsBuffer = nullptr;
 
