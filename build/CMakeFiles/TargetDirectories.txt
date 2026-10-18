@@ -1,8 +1,0 @@
-/home/nixcli/C_Projects/C++/smgcRunner/build/CMakeFiles/glad.dir
-/home/nixcli/C_Projects/C++/smgcRunner/build/CMakeFiles/smgcRunner.dir
-/home/nixcli/C_Projects/C++/smgcRunner/build/CMakeFiles/edit_cache.dir
-/home/nixcli/C_Projects/C++/smgcRunner/build/CMakeFiles/rebuild_cache.dir
-/home/nixcli/C_Projects/C++/smgcRunner/build/CMakeFiles/list_install_components.dir
-/home/nixcli/C_Projects/C++/smgcRunner/build/CMakeFiles/install.dir
-/home/nixcli/C_Projects/C++/smgcRunner/build/CMakeFiles/install/local.dir
-/home/nixcli/C_Projects/C++/smgcRunner/build/CMakeFiles/install/strip.dir

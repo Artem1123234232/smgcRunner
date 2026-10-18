@@ -1,7 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"/home/nixcli/C_Projects/C++/smgcRunner/build/cmake_install.cmake"
-	],
-	"Parallel" : false
-}
