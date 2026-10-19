@@ -98,13 +98,11 @@ void SMGC::swapObjects() {
     std::swap(Objects_A, Objects_B);
 }
 void SMGC::clearObjects() {
-    std::vector<Object>().swap(Objects_B);
+    Objects_B.clear();
+    //std::vector<Object>().swap(Objects_B);
 }
-void SMGC::pushObject(const Object& obj) {
-    Objects_B.push_back(obj);
-}
-void SMGC::pushObject(Object&& obj) {
-    Objects_B.push_back(std::move(obj));
+void SMGC::pushObject(std::unique_ptr<Object> obj) {
+    Objects_B.push_back(std::move(*obj));
 }
 
 int SMGC::keyboard() {
@@ -170,6 +168,20 @@ int SMGC::draw() {
     return 0;
 }
 
+int SMGC::proccessTask(std::unique_ptr<BaseTask> task) {
+    uint32_t taskIdx = task->getIdx();
+    if (taskIs_SmgcSwapObjects(taskIdx)) {
+        swapObjects();
+    } else if (taskIs_SmgcClearObjects(taskIdx)) {
+        clearObjects();
+    } else if (taskIs_SmgcPushObject(taskIdx)) {
+        auto* typed = static_cast<task_SmgcPushObject*>(task.get());
+        pushObject(std::move(typed->obj));
+        typed->obj = nullptr;
+    }
+    return 0;
+}
+
 int SMGC::tick(long long tickCounter) {
     localTickCounter = tickCounter;
     if (glfwWindowShouldClose(window)) {
@@ -186,14 +198,6 @@ int SMGC::tick(long long tickCounter) {
 
         glfwSwapBuffers(window);
         glfwPollEvents();
-    }
-    if (tickCounter % 1 == 0) {
-        clearObjects();
-        float m = (sin(float(tickCounter) / float(Core_getTPS()) * 2.0f)) * 0.5f + 0.5f;
-        glm::vec3 col = PaletteCosinka(m);
-        pushObject({{0.0f, m, m, 0.0f}, {0.5f, 0.0f, 0.0f, 0.0f}, {col.x, col.y, col.z, 1.0f}});
-        pushObject({{-1.0f, 0.0f, 0.0f, 1.5f}, {0.5f, 0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 0.4f, 1.0f}});
-        swapObjects();
     }
     return 0;
 }

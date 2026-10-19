@@ -1,8 +1,10 @@
-#ifndef SMGC_H
-#define SMGC_H
+#pragma once
 
-// Базовый компонент
+// Base component
 #include "../Core/BaseComponent.h"
+
+// Base task
+#include "../Core/BaseTask.h"
 
 // Для работы со строками, вывода в консоль и других базовых операций
 #include <iostream>
@@ -30,6 +32,9 @@
 // BEATIFUL!
 #include "paletts.h"
 
+// Task definitions
+#include "taskDefinitions.h"
+
 class SMGC: public BaseComponent
 {
 public:
@@ -38,10 +43,10 @@ public:
     void windowResize();
     void swapObjects();
     void clearObjects();
-    void pushObject(const Object& obj);
-    void pushObject(Object&& obj);
+    void pushObject(std::unique_ptr<Object> obj);
     int draw();
     int keyboard();
+    int proccessTask(std::unique_ptr<BaseTask> task) override;
     int tick(long long tickCounter) override;
     void death() override;
 private:
@@ -68,5 +73,3 @@ private:
     int windowWidth  = 800;
     int windowHeight = 800;
 };
-
-#endif // SMGC_H

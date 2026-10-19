@@ -16,11 +16,15 @@
 // SMGC
 #include "SMGC/SMGC.h"
 
+// Scene
+#include "Scene/Scene.h"
+
 int main(int argc, char *argv[]) {
     Core core = Core();
     core.setDebugModeEnabled(true);
     core.appendComponent(std::make_unique<Config>(argc, argv));
     core.appendComponent(std::make_unique<SMGC>());
+    core.appendComponent(std::make_unique<Scene>());
 
     core.init();
 

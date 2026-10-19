@@ -44,7 +44,10 @@ add_executable(smgcRunner
   SMGC/EBO.h SMGC/EBO.cpp
   SMGC/ObjectsBuffer.h SMGC/ObjectsBuffer.cpp
   SMGC/paletts.h SMGC/paletts.cpp
+  SMGC/taskDefinitions.h SMGC/taskDefinitions.cpp
   SMGC/SMGC.h SMGC/SMGC.cpp
+
+  Scene/Scene.h  Scene/Scene.cpp
 )
 
 target_link_libraries(smgcRunner PRIVATE
