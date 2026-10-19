@@ -3,7 +3,7 @@ out vec4 fragColor;
 
 #define ITERATIONS 1000
 #define MAX_DISTANCE 50.0
-#define EPSILON 0.001 * 0.1
+#define EPSILON 0.001 * 0.5
 
 uniform float iTime;
 uniform vec2 iResolution;
@@ -37,20 +37,72 @@ float boxSDF(vec3 p, vec3 b) {
     return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
 }
 
-float sphereSDF(float r, vec3 p) {
-    return length(p) - r;
+float sphereSDF(float radius, vec3 p) {
+    return length(p) - radius;
+}
+
+float cubeSDF(float radius, vec3 p) {
+    vec3 d = abs(p) - radius;
+    return min(max(d.x, max(d.y, d.z)), 0.0) + length(max(d, 0.0));
+}
+
+float mandelbulbSDF(float i_radius, vec3 p) {
+    // power = 8
+
+    float boundingSphereRadius = 1.05;
+
+    float boundingSphere = sphereSDF(boundingSphereRadius * i_radius, p);
+    if (boundingSphere >= EPSILON) return boundingSphere;
+    
+    float radius = i_radius / boundingSphereRadius;
+    vec3 q = p / radius;
+
+    vec3 z = q;
+    float dr = 1.0;
+    float r = 0.0;
+
+    for (int i = 0; i < 10; i++) {
+        float r2 = dot(z, z);
+        r = sqrt(r2);
+        if (r > 2.0) break;
+
+        float cT = z.y / r;
+        float sT = sqrt(max(0.0, 1.0 - cT * cT));
+        float r_xz = sqrt(max(1e-20, r2 - z.y * z.y));
+        float inv_rxz = 1.0 / r_xz;
+        float sP = z.x * inv_rxz;
+        float cP = z.z * inv_rxz;
+
+        for (int j = 0; j < 3; j++) {
+            float ncT = 2.0 * cT * cT - 1.0;
+            float nsT = 2.0 * sT * cT;
+            float ncP = 2.0 * cP * cP - 1.0;
+            float nsP = 2.0 * sP * cP;
+            cT = ncT; sT = nsT;
+            cP = ncP; sP = nsP;
+        }
+
+        // r^4, r^7, r^8 без pow()
+        float r4 = r2 * r2;
+        float r7 = r4 * r2 * r;
+        float r8 = r4 * r4;
+
+        dr = 8.0 * r7 * dr + 1.0;
+        z  = r8 * vec3(sT * sP, cT, sT * cP) + q;
+    }
+
+    return 0.5 * log(r) * r / dr * radius;
 }
 
 float mengerSpongeSDF(float radius, vec3 p) {
     vec3 q = p / radius;
 
-    vec3 d = abs(q) - vec3(1.0);
-    float dist = min(max(d.x, max(d.y, d.z)), 0.0) + length(max(d, 0.0));
+    float dist = cubeSDF(1.0, q);
 
     if (dist * radius >= EPSILON) return dist * radius;
 
     float scale = 1.0;
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 5; i++) {
         vec3 a = mod(q * scale, 2.0) - 1.0;
         scale *= 3.0;
         vec3 r = abs(1.0 - 3.0 * abs(a));
@@ -62,41 +114,59 @@ float mengerSpongeSDF(float radius, vec3 p) {
         return dist * radius;
 }
 
-vec4 map(vec3 p) {
-    float d = MAX_DISTANCE;
-    vec3 col = vec3(0.0);
+struct mapResult {
+    float dist;
+    vec4 col;
+    bool is_fractal;
+};
 
-    float d1 = p.y + 1.0;
-    col = mix(vec3(0.333), col, step(EPSILON, d1));
-    d = min(d, d1);
+mapResult map(vec3 p, bool simple) {
+    vec4 col = vec4(0.333, 0.333, 0.333, 1.0);
+    float dist = p.y + 1.0;
+
+    bool fractal = false;
 
     for (int i = 0; i < ObjectsData.items.length(); ++i) {
         Object obj = ObjectsData.items[i];
         int type = int(round(obj.data1.x));
         vec3 lp = p - obj.data1.yzw;
-        vec4 baseCol = obj.data3;
         float dx = MAX_DISTANCE;
-        if (type == -1) {
-            dx = mengerSpongeSDF(obj.data2.x, lp);
+        int a_type = abs(type);
+        bool fractal_x = type < 0;
+        if (!fractal_x || simple) {
+            if (a_type == 1) {
+                dx = sphereSDF(obj.data2.x, lp);
+            } else if (a_type == 2) {
+                dx = cubeSDF(obj.data2.x, lp);
+            }
+        } else {
+            if (a_type == 1) {
+                dx = mandelbulbSDF(obj.data2.x, lp);
+            } else if (a_type == 2) {
+                dx = mengerSpongeSDF(obj.data2.x, lp);
+            } 
         }
-        else if (type == 0) {
-            dx = sphereSDF(obj.data2.x, lp);
+        if (dx < dist) {
+            dist = dx;
+            col = obj.data3;
+            fractal = fractal_x;
         }
-        //baseCol.a = 0.5;
-        col = mix(baseCol.rgb, col, step(EPSILON, dx));
-        d = min(d, dx);
     }
 
-    return vec4(col, d);
+    mapResult res;
+    res.dist = dist;
+    res.col = col;
+    res.is_fractal = fractal;
+    return res;
 }
 
 vec3 normal(vec3 p) {
     const vec2 k = vec2(1.0, -1.0);
     return normalize(
-        k.xyy * map(p + k.xyy * EPSILON).w +
-        k.yyx * map(p + k.yyx * EPSILON).w +
-        k.yxy * map(p + k.yxy * EPSILON).w +
-        k.xxx * map(p + k.xxx * EPSILON).w
+        k.xyy * map(p + k.xyy * EPSILON, false).dist +
+        k.yyx * map(p + k.yyx * EPSILON, false).dist +
+        k.yxy * map(p + k.yxy * EPSILON, false).dist +
+        k.xxx * map(p + k.xxx * EPSILON, false).dist
     );
 }
 
@@ -105,7 +175,7 @@ float calcShadow(vec3 ro, vec3 rd, float mint, float maxt, float k) {
     float t = mint;
     
     for (int i = 0; i < 40; i++) {
-        float h = map(ro + rd * t).w;
+        float h = map(ro + rd * t, true).dist;
         
         if (h < EPSILON) {
             return 0.0; 
@@ -119,21 +189,23 @@ float calcShadow(vec3 ro, vec3 rd, float mint, float maxt, float k) {
     return clamp(res, 0.0, 1.0);
 }
 
-float light(vec3 p) {
-    vec3 light_pos = vec3(1.0, 2.0, 1.0);
+float light(vec3 p, bool shadows) {
+    vec3 light_pos = vec3(2.0, 4.0, 2.0);
     vec3 l = normalize(light_pos - p);
     vec3 normal = normal(p);
     float lambert = clamp(dot(normal, l) * 0.5 + 0.5, 0.0, 1.0);
+    if (!shadows) return lambert;
     float shadow = calcShadow(p + normal * 0.02, l, 0.01, 20.0, 16.0) * 0.5 + 0.5;
     return min(lambert, shadow);
 }
 
 vec3 calcColor(vec3 p, vec3 ro, int i, float d) {
     // base color
-    vec3 col = map(p).xyz;
+    mapResult map_result = map(p, false);
+    vec3 col = map_result.col.rgb;
 
     // light
-    col *= light(p);
+    col *= light(p, !map_result.is_fractal);
 
     // ambient occlusion
     col *= pow(1.0 - (float(i) / float(ITERATIONS) * 2.0), 2.0);
@@ -150,7 +222,7 @@ vec3 raymarch(vec3 ro, vec3 rd) {
     for (int i = 0; i < ITERATIONS; i++)
     {
         vec3 p = ro + total_distance_traveled * rd;
-        float d = map(p).w;
+        float d = map(p, false).dist;
         if (total_distance_traveled > MAX_DISTANCE || d < EPSILON) {
             return calcColor(p, ro, i, d);
         }
