@@ -3,7 +3,7 @@ out vec4 fragColor;
 
 #define ITERATIONS 1000
 #define MAX_DISTANCE 50.0
-#define EPSILON 0.001
+#define EPSILON 0.001 * 0.1
 
 uniform float iTime;
 uniform vec2 iResolution;
@@ -47,6 +47,8 @@ float mengerSpongeSDF(float radius, vec3 p) {
     vec3 d = abs(q) - vec3(1.0);
     float dist = min(max(d.x, max(d.y, d.z)), 0.0) + length(max(d, 0.0));
 
+    if (dist * radius >= EPSILON) return dist * radius;
+
     float scale = 1.0;
     for (int i = 0; i < 4; i++) {
         vec3 a = mod(q * scale, 2.0) - 1.0;
@@ -57,7 +59,7 @@ float mengerSpongeSDF(float radius, vec3 p) {
         dist = max(dist, c);
     }
 
-    return dist * radius;
+        return dist * radius;
 }
 
 vec4 map(vec3 p) {
@@ -98,29 +100,32 @@ vec3 normal(vec3 p) {
     );
 }
 
-float raymarchLight(vec3 ro, vec3 rd) {
-    float dO = 0.0;
-    float md = 1.0;
-    for (int i = 0; i < 20; i++)
-    {
-        vec3 p = ro + rd * dO;
-        float dS = map(p).w;
-        md = min(md, dS);
-        dO += dS;
-        if (dO > 50.0 || dS < 0.1) {
-            break;
+float calcShadow(vec3 ro, vec3 rd, float mint, float maxt, float k) {
+    float res = 1.0;
+    float t = mint;
+    
+    for (int i = 0; i < 40; i++) {
+        float h = map(ro + rd * t).w;
+        
+        if (h < EPSILON) {
+            return 0.0; 
         }
+        
+        res = min(res, k * h / t);
+        t += h;
+        
+        if (t > maxt) break;
     }
-    return md;
+    return clamp(res, 0.0, 1.0);
 }
 
 float light(vec3 p) {
-    vec3 light_pos = vec3(1.0, 2.0, 0.5);
+    vec3 light_pos = vec3(1.0, 2.0, 1.0);
     vec3 l = normalize(light_pos - p);
     vec3 normal = normal(p);
     float lambert = clamp(dot(normal, l) * 0.5 + 0.5, 0.0, 1.0);
-    float shadow = clamp(raymarchLight(p + normal, l) + 1.0, 0.0, 1.0);
-    return lambert * shadow;
+    float shadow = calcShadow(p + normal * 0.02, l, 0.01, 20.0, 16.0) * 0.5 + 0.5;
+    return min(lambert, shadow);
 }
 
 vec3 calcColor(vec3 p, vec3 ro, int i, float d) {
