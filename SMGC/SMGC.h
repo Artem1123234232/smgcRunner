@@ -35,6 +35,11 @@
 // Task definitions
 #include "taskDefinitions.h"
 
+struct Camera {
+    glm::vec3 pos;
+    glm::vec3 rot;
+};
+
 class SMGC: public BaseComponent
 {
 public:
@@ -64,8 +69,7 @@ private:
 
     std::unique_ptr<ObjectsBuffer> objectsBuffer = nullptr;
 
-    glm::vec3 cameraPos = {0.0f, 0.0f, 0.0f};
-    glm::vec3 cameraRot = {0.0f, 0.0f, 0.0f};
+    Camera camera{{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}};
 
     float moveSpeed = 3.0f;
     float rotSpeed  = 90.0f;

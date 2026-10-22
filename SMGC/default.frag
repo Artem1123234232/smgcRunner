@@ -14,15 +14,47 @@ struct Object {
     vec4 data1;
     vec4 data2;
     vec4 data3;
+    vec4 data4;
 };
 
 layout(std430, binding = 0) buffer ObjectsBuffer {
     Object items[];
 } ObjectsData;
 
-float circle(vec2 uv, vec2 p, float r) {
-    vec2 l = vec2(uv.x, 1.0 - uv.y) - p;
-    return step(pow(r, 2.0), dot(l, l));
+mat4 rotationMatrixX(float angle) {
+    float c = cos(angle);
+    float s = sin(angle);
+    return mat4(
+        vec4(1, 0, 0, 0),
+        vec4(0, c, -s, 0),
+        vec4(0, s, c, 0),
+        vec4(0, 0, 0, 1)
+    );
+}
+mat4 rotationMatrixY(float angle) {
+    float c = cos(angle);
+    float s = sin(angle);
+    return mat4(
+        vec4(c, 0, s, 0),
+        vec4(0, 1, 0, 0),
+        vec4(-s, 0, c, 0),
+        vec4(0, 0, 0, 1)
+    );
+}
+mat4 rotationMatrixZ(float angle) {
+    float c = cos(angle);
+    float s = sin(angle);
+    return mat4(
+        vec4(c, -s, 0, 0),
+        vec4(s, c, 0, 0),
+        vec4(0, 0, 1, 0),
+        vec4(0, 0, 0, 1)
+    );
+}
+
+float squareSDF(float radius, vec2 p) {
+    vec2 d = abs(p) - radius;
+    return min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
 }
 
 float crossSDF(in vec3 p) {
@@ -44,6 +76,20 @@ float sphereSDF(float radius, vec3 p) {
 float cubeSDF(float radius, vec3 p) {
     vec3 d = abs(p) - radius;
     return min(max(d.x, max(d.y, d.z)), 0.0) + length(max(d, 0.0));
+}
+
+float cubeOutSDF(float radius, vec3 p) {
+    return length(max(abs(p) - radius, 0.0));
+}
+
+float cubeInSDF(float radius, vec3 p) {
+    vec3 d = abs(p) - radius;
+    return min(max(d.x, max(d.y, d.z)), 0.0);
+}
+
+float capsuleSDF(float radius, float height, vec3 p) {
+    p.y = max(abs(p.y - height + radius) - height * 0.5, 0.0f);
+    return sphereSDF(radius, p);
 }
 
 float mandelbulbSDF(float i_radius, vec3 p) {
@@ -97,9 +143,10 @@ float mandelbulbSDF(float i_radius, vec3 p) {
 float mengerSpongeSDF(float radius, vec3 p) {
     vec3 q = p / radius;
 
-    float dist = cubeSDF(1.0, q);
+    float distOut = cubeOutSDF(1.0, q);
+    if (distOut * radius >= EPSILON) return distOut * radius;
 
-    if (dist * radius >= EPSILON) return dist * radius;
+    float dist = distOut + cubeInSDF(1.0, q);
 
     float scale = 1.0;
     for (int i = 0; i < 5; i++) {
@@ -114,6 +161,32 @@ float mengerSpongeSDF(float radius, vec3 p) {
         return dist * radius;
 }
 
+float planeSDF(vec3 p) {
+    return abs(p.y) - 0.5 * EPSILON;
+}
+
+vec4 tilePlane(vec3 p) {
+    float dist = planeSDF(p);
+
+    if (dist >= EPSILON) return vec4(0.0, 0.0, 0.0, dist);
+
+    vec3 colA = vec3(0.333);
+    vec3 colB = vec3(0.333 * 0.5);
+    float tile = step(clamp(abs(squareSDF(0.5, mod(p.xz, 1.0) - 0.5)), 0.0, 1.0), 0.025);
+
+    vec3 col = mix(colA, colB, tile);
+
+    return vec4(col, dist);
+    /*vec3 col = colA;
+    colB = vec3(0.666, 0.333, 0.333);
+    vec3 colC = vec3(0.333, 0.333, 0.666);
+
+    if (tile < 0.0) col = colC;
+    else if (tile > 0.0) col = colB;
+
+    return vec4(col * clamp(abs(tile) * 0.5 + 0.5, 0.0, 1.0), dist);*/
+}
+
 struct mapResult {
     float dist;
     vec4 col;
@@ -121,8 +194,9 @@ struct mapResult {
 };
 
 mapResult map(vec3 p, bool simple) {
-    vec4 col = vec4(0.333, 0.333, 0.333, 1.0);
-    float dist = p.y + 1.0;
+    vec4 plane = tilePlane(p + 1.0);
+    vec4 col = vec4(plane.rgb, 1.0);
+    float dist = plane.w;
 
     bool fractal = false;
 
@@ -133,11 +207,16 @@ mapResult map(vec3 p, bool simple) {
         float dx = MAX_DISTANCE;
         int a_type = abs(type);
         bool fractal_x = type < 0;
+        mat3 rot = mat3(rotationMatrixX(obj.data4.x)) * mat3(rotationMatrixY(obj.data4.y)) * mat3(rotationMatrixZ(obj.data4.z));
+        lp *= rot;
         if (!fractal_x || simple) {
             if (a_type == 1) {
                 dx = sphereSDF(obj.data2.x, lp);
             } else if (a_type == 2) {
                 dx = cubeSDF(obj.data2.x, lp);
+            }
+            else if (a_type == 3) {
+                dx = capsuleSDF(obj.data2.x, obj.data2.w, lp);
             }
         } else {
             if (a_type == 1) {

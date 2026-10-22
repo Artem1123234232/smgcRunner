@@ -10,9 +10,10 @@ struct Object {
     glm::vec4 data1;
     glm::vec4 data2;
     glm::vec4 data3;
+    glm::vec4 data4;
 };
-// std430: три vec4 = 48 байт, без выравнивающих «дыр»
-static_assert(sizeof(Object) == 48, "Object layout does not match std430");
+// std430: три vec4 = 48 байт
+static_assert(sizeof(Object) == 64, "Object layout does not match std430");
 
 class ObjectsBuffer {
 public:

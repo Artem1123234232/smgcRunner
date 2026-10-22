@@ -14,3 +14,8 @@ baseCol_R
 baseCol_G
 baseCol_B
 baseCol_A
+4)
+Rotation X
+Rotation Y
+Rotation Z
+null

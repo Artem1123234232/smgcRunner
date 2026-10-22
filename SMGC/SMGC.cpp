@@ -104,24 +104,41 @@ void SMGC::clearObjects() {
 void SMGC::pushObject(std::unique_ptr<Object> obj) {
     Objects_B.push_back(std::move(*obj));
 }
+/*void SMGC::getCamera(glm::vec3 newPos, glm::vec3 newRot) {
+    camera.pos = newPos;
+    camera.rot = newRot;
+}
+void SMGC::setCamera(glm::vec3 newPos, glm::vec3 newRot) {
+    camera.pos = newPos;
+    camera.rot = newRot;
+}*/
 
 int SMGC::keyboard() {
     float dt = 1.0f / float(Core_getTPS());
 
-    if (glfwGetKey(window, GLFW_KEY_LEFT)  == GLFW_PRESS) cameraRot.y += rotSpeed * dt;
-    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) cameraRot.y -= rotSpeed * dt;
-    if (glfwGetKey(window, GLFW_KEY_UP)    == GLFW_PRESS) cameraRot.x += rotSpeed * dt;
-    if (glfwGetKey(window, GLFW_KEY_DOWN)  == GLFW_PRESS) cameraRot.x -= rotSpeed * dt;
+    if (glfwGetKey(window, GLFW_KEY_LEFT)  == GLFW_PRESS) camera.rot.y += rotSpeed * dt;
+    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) camera.rot.y -= rotSpeed * dt;
+    if (glfwGetKey(window, GLFW_KEY_UP)    == GLFW_PRESS) camera.rot.x += rotSpeed * dt;
+    if (glfwGetKey(window, GLFW_KEY_DOWN)  == GLFW_PRESS) camera.rot.x -= rotSpeed * dt;
 
+    if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
+        camera.rot.x = round(camera.rot.x / 90.0f) * 90.0f;
+        camera.rot.y = round(camera.rot.y / 90.0f) * 90.0f;
+        camera.rot.z = round(camera.rot.z / 90.0f) * 90.0f;
+        camera.pos.x = floor(camera.pos.x) + 0.5;
+        camera.pos.y = floor(camera.pos.y) + 0.5;
+        camera.pos.z = floor(camera.pos.z) + 0.5;
+    }
+    
     // ограничение pitch, чтобы не было переворота (gimbal-lock)
-    cameraRot.x = std::clamp(cameraRot.x, -89.0f, 89.0f);
+    camera.rot.x = std::clamp(camera.rot.x, -89.0f, 89.0f);
     
     // ограничение yaw чтобы не было бесконечного увеличения числа
-    cameraRot.y = std::fmod(cameraRot.y, 360.0f);
+    camera.rot.y = std::fmod(camera.rot.y, 360.0f);
 
     // пересчитываем углы
-    float yaw   = glm::radians(cameraRot.y);
-    float pitch = glm::radians(cameraRot.x);
+    float yaw   = glm::radians(camera.rot.y);
+    float pitch = glm::radians(camera.rot.x);
 
     // --- направления ---
     glm::vec3 forward = {0.0f, 0.0f, 0.0f};
@@ -137,10 +154,10 @@ int SMGC::keyboard() {
     // --- ДВИЖЕНИЕ (WASD) ---
     float step = moveSpeed * dt;
 
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) cameraPos += forward * step;
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) cameraPos -= forward * step;
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) cameraPos += right   * step;
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) cameraPos -= right   * step;
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) camera.pos += forward * step;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) camera.pos -= forward * step;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) camera.pos += right   * step;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) camera.pos -= right   * step;
     
     return 0;
 }
@@ -157,8 +174,8 @@ int SMGC::draw() {
     shaderProgram->Activate();
     shaderProgram->setFloat("iTime", float(localTickCounter) / float(Core_getTPS()));
     shaderProgram->setVec2("iResolution", float(windowWidth), float(windowHeight));
-    shaderProgram->setVec3("iCameraPos", cameraPos);
-    shaderProgram->setVec3("iCameraRot", cameraRot);
+    shaderProgram->setVec3("iCameraPos", camera.pos);
+    shaderProgram->setVec3("iCameraRot", camera.rot);
     
     if (!vao) {std::cerr << getPrefix() << "Critical Error: vao is nullptr" << std::endl; return -ENODEV;}
     vao->Bind();
@@ -187,11 +204,11 @@ int SMGC::tick(long long tickCounter) {
     if (glfwWindowShouldClose(window)) {
         Core_stop();
     } else {
-        //cameraPos = {0.0f, 0.0f, sin(float(localTickCounter) / float(Core_getTPS())) * 5.0f};
+        //camera.pos = {0.0f, 0.0f, sin(float(localTickCounter) / float(Core_getTPS())) * 5.0f};
         keyboard();
 
-        if (Core_isDebugModeEnabled()) std::clog << getPrefix() << "cameraPos: " << std::to_string(cameraPos.x) << ";" << std::to_string(cameraPos.y) << ";" << std::to_string(cameraPos.z) << std::endl;
-        if (Core_isDebugModeEnabled()) std::clog << getPrefix() << "cameraRot: " << std::to_string(cameraRot.x) << ";" << std::to_string(cameraRot.y) << ";" << std::to_string(cameraRot.z) << std::endl;
+        if (Core_isDebugModeEnabled()) std::clog << getPrefix() << "camera.pos: " << std::to_string(camera.pos.x) << ";" << std::to_string(camera.pos.y) << ";" << std::to_string(camera.pos.z) << std::endl;
+        if (Core_isDebugModeEnabled()) std::clog << getPrefix() << "camera.rot: " << std::to_string(camera.rot.x) << ";" << std::to_string(camera.rot.y) << ";" << std::to_string(camera.rot.z) << std::endl;
         
         int errorCode = draw();
         if (errorCode != 0) return errorCode;
