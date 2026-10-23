@@ -77,6 +77,7 @@ int SMGC::init() {
     ebo->Unbind();
 
     clearObjects();
+    swapObjects();
 
     return 0;
 }
@@ -86,18 +87,32 @@ void SMGC::windowResize() {
 
 void SMGC::swapObjects() {
     std::swap(Objects_A, Objects_B);
+    std::swap(Vertices_A, Vertices_B);
+    std::swap(Indices_A, Indices_B);
+
+    vao->Unbind();
+    vbo->Upload(Vertices_A);
+    ebo->Upload(Indices_A);
 }
 void SMGC::clearObjects() {
     Objects_B.clear();
+    Vertices_B.clear();
+    Indices_B.clear();
 
-    //Quad(vertices, indices);
-    Cube(vertices, indices, 1.0f, 0.0f);
-    AntiCube(vertices, indices, maxDist, 1.0f);
-
-    vbo->Upload(vertices);
-    ebo->Upload(indices);
+    //Quad(Vertices_B, Indices_B);
+    AntiCube(Vertices_B, Indices_B, maxDist, 1.0f);
+    Plane(Vertices_B, Indices_B, camera.pos, maxDist, -1.0f, epsilon);
 }
 void SMGC::pushObject(std::unique_ptr<Object> obj) {
+    const float bound = ObjectBoundingRadius(*obj);
+    const float dist = glm::distance(glm::vec3(obj->data1.y, obj->data1.z, obj->data1.w), camera.pos);
+    if (bound >= 0.0f && dist - bound > maxDist) return;
+
+    const size_t vertexStart = Vertices_B.size();
+    const size_t indexStart = Indices_B.size();
+    if (GenerateObject(Vertices_B, Indices_B, *obj) && dist + bound > maxDist)
+        CullFarTriangles(Vertices_B, Indices_B, vertexStart, indexStart, camera.pos, maxDist);
+
     Objects_B.push_back(std::move(*obj));
 }
 /*void SMGC::getCamera(glm::vec3 newPos, glm::vec3 newRot) {
@@ -156,6 +171,13 @@ int SMGC::keyboard() {
         camera.pos.z = floor(camera.pos.z) + 0.5;
     }
 
+    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
+        camera.rot = {0.0f, 0.0f, 0.0f};
+        camera.pos = {0.0f, 0.0f, 0.0f};
+        moveSpeed = standartMoveSpeed;
+        rotSpeed = standartRotSpeed;
+    }
+
     if (localTickCounter % 10 == 0) {
         if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
             rotSpeed /= 2.0f;
@@ -185,23 +207,39 @@ int SMGC::draw() {
     shaderProgram->setVec3("iCameraPos", camera.pos);
     shaderProgram->setVec3("iCameraRot", camera.rot);
     shaderProgram->setFloat("iMaxDist", maxDist);
+    shaderProgram->setFloat("iEpsilon", epsilon);
     
     if (!vao) {std::cerr << getPrefix() << "Critical Error: vao is nullptr" << std::endl; return -ENODEV;}
     vao->Bind();
 
     // 1) заливка
-    shaderProgram->setFloat("iOutline", 0.0f);
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(1.0f, 1.0f);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+
+    shaderProgram->setFloat("iOutline", 1.0f);
+    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    glDepthFunc(GL_LESS);
+    glDepthMask(GL_TRUE);
+    glDrawElements(GL_TRIANGLES, Indices_A.size(), GL_UNSIGNED_INT, 0);
+
+    shaderProgram->setFloat("iOutline", 0.0f);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glDepthFunc(GL_EQUAL);
+    glDepthMask(GL_FALSE);
+    glDrawElements(GL_TRIANGLES, Indices_A.size(), GL_UNSIGNED_INT, 0);
+
+    glDepthFunc(GL_LESS);
+    glDepthMask(GL_TRUE);
 
     // 2) обводка
     shaderProgram->setFloat("iOutline", 1.0f);
     glDisable(GL_POLYGON_OFFSET_FILL);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glLineWidth(1.0f);
-    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, Indices_A.size(), GL_UNSIGNED_INT, 0);
+
+    vao->Unbind();
 
     return 0;
 }

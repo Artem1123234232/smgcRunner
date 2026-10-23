@@ -3,6 +3,7 @@ layout (location = 0) in vec3 aPos;
 layout (location = 1) in float aAttached;
 
 out vec3 fragPos;
+invariant gl_Position;
 
 uniform vec3 iCameraPos;
 uniform vec3 iCameraRot;
@@ -29,7 +30,7 @@ mat3 cameraRotation(vec3 deg) {
 
 void main() {
     mat3 R = cameraRotation(iCameraRot);
-    vec3 relPos  = mix(aPos - iCameraPos, aPos, aAttached); // позиция относительно камеры
+    vec3 relPos  = mix(aPos - iCameraPos, aPos, aAttached);
     vec3 viewPos = R * relPos;
 
     fragPos = relPos;

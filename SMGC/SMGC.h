@@ -70,17 +70,23 @@ private:
     std::vector<Object> Objects_A{};
     std::vector<Object> Objects_B{};
 
-    std::vector<Vertex> vertices;
-    std::vector<GLuint> indices;
+    std::vector<Vertex> Vertices_A{};
+    std::vector<Vertex> Vertices_B{};
+    std::vector<GLuint> Indices_A{};
+    std::vector<GLuint> Indices_B{};
 
     std::unique_ptr<ObjectsBuffer> objectsBuffer = nullptr;
 
     Camera camera{{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}};
 
-    float moveSpeed = 3.0f;
-    float rotSpeed  = 90.0f;
+    float standartMoveSpeed = 3.0f;
+    float standartRotSpeed  = 90.0f;
+
+    float moveSpeed = standartMoveSpeed;
+    float rotSpeed  = standartRotSpeed;
 
     float maxDist = 50.0f;
+    float epsilon = 0.0005f;
 
     int windowWidth  = 800;
     int windowHeight = 800;
