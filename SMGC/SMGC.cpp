@@ -3,24 +3,6 @@
 // Core class
 #include "../Core/Core.h"
 
-/*GLfloat vertices[] = {
-    -0.5f, -0.5f, 0.0f,
-    0.5f, -0.5f, 0.0f,
-    0.5f,  0.5f, 0.0f,
-    -0.5f,  0.5f, 0.0f
-};*/
-GLfloat vertices[] = {
-    -1.0f, -1.0f, 0.0f,
-    1.0f, -1.0f, 0.0f,
-    1.0f,  1.0f, 0.0f,
-    -1.0f,  1.0f, 0.0f
-};
-
-GLuint indices[] = {
-    0, 1, 2,
-    2, 3, 0
-};
-
 SMGC::SMGC() : BaseComponent("SMGC") {
     // Constructor
 }
@@ -61,6 +43,11 @@ int SMGC::init() {
     if (errorCode == 0) {std::cerr << getPrefix() << "Critical Error: gladLoadGL failed, return code " << std::to_string(errorCode) << std::endl; return -ENODEV;}
     std::clog << getPrefix() << "GL: " << glGetString(GL_VERSION) << "\n";
 
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
+
     glViewport(0, 0, windowWidth, windowHeight);
 
     shaderProgram = std::make_unique<Shader>("SMGC/default.vert", "SMGC/default.frag");
@@ -72,21 +59,24 @@ int SMGC::init() {
     if (!vao) {std::cerr << getPrefix() << "Critical Error: vao is nullptr" << std::endl; return -ENODEV;}
     vao->Bind();
 
-    vbo = std::make_unique<VBO>(vertices, sizeof(vertices));
+    vbo = std::make_unique<VBO>();
     if (!vbo) {std::cerr << getPrefix() << "Critical Error: vbo is nullptr" << std::endl; return -ENODEV;}
-    
-    ebo = std::make_unique<EBO>(indices, sizeof(indices));
+
+    ebo = std::make_unique<EBO>();
     if (!ebo) {std::cerr << getPrefix() << "Critical Error: ebo is nullptr" << std::endl; return -ENODEV;}
+    ebo->Bind();
 
     objectsBuffer = std::make_unique<ObjectsBuffer>();
     if (!objectsBuffer) {std::cerr << getPrefix() << "Critical Error: objectsBuffer is nullptr" << std::endl; return -ENODEV;}
     objectsBuffer->Bind(0);
 
-    vao->LinkVBO(*vbo, 0);
+    vao->LinkVBO(*vbo, 0, 1);
     
     vao->Unbind();
     vbo->Unbind();
     ebo->Unbind();
+
+    clearObjects();
 
     return 0;
 }
@@ -99,7 +89,13 @@ void SMGC::swapObjects() {
 }
 void SMGC::clearObjects() {
     Objects_B.clear();
-    //std::vector<Object>().swap(Objects_B);
+
+    //Quad(vertices, indices);
+    Cube(vertices, indices, 1.0f, 0.0f);
+    AntiCube(vertices, indices, maxDist, 1.0f);
+
+    vbo->Upload(vertices);
+    ebo->Upload(indices);
 }
 void SMGC::pushObject(std::unique_ptr<Object> obj) {
     Objects_B.push_back(std::move(*obj));
@@ -120,15 +116,6 @@ int SMGC::keyboard() {
     if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) camera.rot.y -= rotSpeed * dt;
     if (glfwGetKey(window, GLFW_KEY_UP)    == GLFW_PRESS) camera.rot.x += rotSpeed * dt;
     if (glfwGetKey(window, GLFW_KEY_DOWN)  == GLFW_PRESS) camera.rot.x -= rotSpeed * dt;
-
-    if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
-        camera.rot.x = round(camera.rot.x / 90.0f) * 90.0f;
-        camera.rot.y = round(camera.rot.y / 90.0f) * 90.0f;
-        camera.rot.z = round(camera.rot.z / 90.0f) * 90.0f;
-        camera.pos.x = floor(camera.pos.x) + 0.5;
-        camera.pos.y = floor(camera.pos.y) + 0.5;
-        camera.pos.z = floor(camera.pos.z) + 0.5;
-    }
     
     // ограничение pitch, чтобы не было переворота (gimbal-lock)
     camera.rot.x = std::clamp(camera.rot.x, -89.0f, 89.0f);
@@ -158,14 +145,35 @@ int SMGC::keyboard() {
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) camera.pos -= forward * step;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) camera.pos += right   * step;
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) camera.pos -= right   * step;
-    
+
+
+    if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
+        camera.rot.x = round(camera.rot.x / 45.0f) * 45.0f;
+        camera.rot.y = round(camera.rot.y / 45.0f) * 45.0f;
+        camera.rot.z = round(camera.rot.z / 45.0f) * 45.0f;
+        camera.pos.x = floor(camera.pos.x) + 0.5;
+        camera.pos.y = floor(camera.pos.y) + 0.5;
+        camera.pos.z = floor(camera.pos.z) + 0.5;
+    }
+
+    if (localTickCounter % 10 == 0) {
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+            rotSpeed /= 2.0f;
+            moveSpeed /= 2.0f;
+        }
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+            rotSpeed *= 2.0f;
+            moveSpeed *= 2.0f;
+        }
+    }
+
     return 0;
 }
 
 int SMGC::draw() {
     //glClearColor(1.0f, 0.2f, 0.2f, 1.0f);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     if (!objectsBuffer) {std::cerr << getPrefix() << "Critical Error: objectsBuffer is nullptr" << std::endl; return -ENODEV;}
     objectsBuffer->Upload(Objects_A);
@@ -176,11 +184,24 @@ int SMGC::draw() {
     shaderProgram->setVec2("iResolution", float(windowWidth), float(windowHeight));
     shaderProgram->setVec3("iCameraPos", camera.pos);
     shaderProgram->setVec3("iCameraRot", camera.rot);
+    shaderProgram->setFloat("iMaxDist", maxDist);
     
     if (!vao) {std::cerr << getPrefix() << "Critical Error: vao is nullptr" << std::endl; return -ENODEV;}
     vao->Bind();
 
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    // 1) заливка
+    shaderProgram->setFloat("iOutline", 0.0f);
+    glEnable(GL_POLYGON_OFFSET_FILL);
+    glPolygonOffset(1.0f, 1.0f);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+
+    // 2) обводка
+    shaderProgram->setFloat("iOutline", 1.0f);
+    glDisable(GL_POLYGON_OFFSET_FILL);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glLineWidth(1.0f);
+    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 
     return 0;
 }

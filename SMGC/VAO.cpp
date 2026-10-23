@@ -3,13 +3,18 @@
 VAO::VAO() {
     glGenVertexArrays(1, &ID);
 }
-void VAO::LinkVBO(VBO& VBO, GLuint layout) {
+
+void VAO::LinkVBO(VBO& VBO, GLuint layoutPos, GLuint layoutAttached) {
     VBO.Bind();
-    glVertexAttribPointer(layout, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-    glEnableVertexAttribArray(layout);
+    glVertexAttribPointer(layoutPos, 3, GL_FLOAT, GL_FALSE,
+                          sizeof(Vertex), (void*)offsetof(Vertex, pos));
+    glEnableVertexAttribArray(layoutPos);
+
+    glVertexAttribPointer(layoutAttached, 1, GL_FLOAT, GL_FALSE,
+                          sizeof(Vertex), (void*)offsetof(Vertex, attached));
+    glEnableVertexAttribArray(layoutAttached);
     VBO.Unbind();
 }
-
 void VAO::Bind() {
     glBindVertexArray(ID);  
 }

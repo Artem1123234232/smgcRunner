@@ -35,6 +35,9 @@
 // Task definitions
 #include "taskDefinitions.h"
 
+// Objects Generator
+#include "ObjectsGenerator.h"
+
 struct Camera {
     glm::vec3 pos;
     glm::vec3 rot;
@@ -67,12 +70,17 @@ private:
     std::vector<Object> Objects_A{};
     std::vector<Object> Objects_B{};
 
+    std::vector<Vertex> vertices;
+    std::vector<GLuint> indices;
+
     std::unique_ptr<ObjectsBuffer> objectsBuffer = nullptr;
 
     Camera camera{{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}};
 
     float moveSpeed = 3.0f;
     float rotSpeed  = 90.0f;
+
+    float maxDist = 50.0f;
 
     int windowWidth  = 800;
     int windowHeight = 800;

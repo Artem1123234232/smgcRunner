@@ -2,6 +2,7 @@
 
 #include <glad/glad.h>
 #include <glm/glm.hpp>
+#include <glad/glad.h>
 
 // For console output
 #include <iostream>
