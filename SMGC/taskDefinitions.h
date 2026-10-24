@@ -1,7 +1,7 @@
 #pragma once
 
 // Base task
-#include "../Core/BaseTask.h"
+#include <smpb/BaseTask.h>
 
 // Object class
 #include "ObjectsBuffer.h"

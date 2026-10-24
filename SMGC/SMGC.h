@@ -1,10 +1,10 @@
 #pragma once
 
 // Base component
-#include "../Core/BaseComponent.h"
+#include <smpb/BaseComponent.h>
 
 // Base task
-#include "../Core/BaseTask.h"
+#include <smpb/BaseTask.h>
 
 // Для работы со строками, вывода в консоль и других базовых операций
 #include <iostream>
@@ -54,7 +54,7 @@ public:
     void pushObject(std::unique_ptr<Object> obj);
     int draw();
     int keyboard();
-    int proccessTask(std::unique_ptr<BaseTask> task) override;
+    int processTask(std::unique_ptr<BaseTask> task) override;
     int tick(long long tickCounter) override;
     void death() override;
 private:

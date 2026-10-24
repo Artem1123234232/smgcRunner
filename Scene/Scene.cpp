@@ -1,7 +1,7 @@
 #include "Scene.h"
 
 // Core class
-#include "../Core/Core.h"
+#include <smpb/Core.h>
 
 Scene::Scene() : BaseComponent("Scene") {
     // Constructor

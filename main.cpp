@@ -10,8 +10,8 @@
 #include <cmath>
 
 // Ядро и его компоненты
-#include "Core/Config.h"
-#include "Core/Core.h"
+#include <smpb/Config.h>
+#include <smpb/Core.h>
 
 // SMGC
 #include "SMGC/SMGC.h"

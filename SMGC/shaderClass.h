@@ -8,7 +8,7 @@
 #include <iostream>
 
 // For read files
-#include "../Core/tools.h"
+#include <smpb/tools.h>
 
 class Shader {
 public:

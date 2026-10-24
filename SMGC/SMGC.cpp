@@ -1,7 +1,7 @@
 #include "SMGC.h"
 
 // Core class
-#include "../Core/Core.h"
+#include <smpb/Core.h>
 
 SMGC::SMGC() : BaseComponent("SMGC") {
     // Constructor
@@ -244,7 +244,7 @@ int SMGC::draw() {
     return 0;
 }
 
-int SMGC::proccessTask(std::unique_ptr<BaseTask> task) {
+int SMGC::processTask(std::unique_ptr<BaseTask> task) {
     uint32_t taskIdx = task->getIdx();
     if (taskIs_SmgcSwapObjects(taskIdx)) {
         swapObjects();

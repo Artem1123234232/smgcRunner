@@ -1,10 +1,10 @@
 #pragma once
 
 // Base component
-#include "../Core/BaseComponent.h"
+#include <smpb/BaseComponent.h>
 
 // Base task
-#include "../Core/BaseTask.h"
+#include <smpb/BaseTask.h>
 
 // SMGC
 #include "../SMGC/SMGC.h"

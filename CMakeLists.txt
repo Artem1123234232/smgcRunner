@@ -2,7 +2,11 @@ cmake_minimum_required(VERSION 3.16)
 
 project(smgcRunner LANGUAGES C CXX)   # <- добавил C
 
-# Устанавливаем стандарт C++20
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
+# Устанавливаем стандарт C++23
 set(CMAKE_CXX_STANDARD 23)
 # Говорим, что это обязательное требование (если не потянет — вылетит с ошибкой)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -27,16 +31,16 @@ find_package(OpenGL REQUIRED)
 # --- GLM ---
 find_package(glm REQUIRED)
 
+include(FetchContent)
+FetchContent_Declare(smpb
+  GIT_REPOSITORY https://github.com/Artem1123234232/SMPB.git
+  GIT_TAG        main
+)
+FetchContent_MakeAvailable(smpb)
 
 add_executable(smgcRunner
   main.cpp
   #AndroidFix.cpp
-  
-  Core/Core.h Core/Core.cpp
-  Core/BaseTask.h Core/BaseTask.cpp
-  Core/BaseComponent.h Core/BaseComponent.cpp
-  Core/tools.h Core/tools.cpp
-  Core/Config.h Core/Config.cpp
   
   SMGC/shaderClass.h SMGC/shaderClass.cpp
   SMGC/VAO.h SMGC/VAO.cpp
@@ -52,11 +56,18 @@ add_executable(smgcRunner
 )
 
 target_link_libraries(smgcRunner PRIVATE
+    smpb::core
     glad
     glfw
     OpenGL::GL
     glm::glm
 )
+
+include(CheckIPOSupported)
+check_ipo_supported(RESULT ipo_ok)
+if(ipo_ok)
+  set_property(TARGET smgcRunner PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
+endif()
 
 include(GNUInstallDirs)
 install(TARGETS smgcRunner
