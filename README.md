@@ -35,6 +35,7 @@
 - Сцена передаётся задачами SMPB: очистить, добавить объект, показать. Объекты хранятся с **двойной буферизацией**, поэтому сцену можно собирать по частям, пока на экране остаётся предыдущая.
 - Примитивы: шар, куб, капсула. Фракталы: Mandelbulb и губка Менгера.
 - Гибридный рендеринг в 3 прохода: depth-prepass по прокси-мешам, ray-marching только в ближайшей к камере прокси-поверхности, оранжевый каркас поверх. Каркас можно выключить задачей.
+- Полигональный режим: ray-marching отключается задачей, и объекты рисуются как обычные полигоны с плоским затенением.
 - Прокси-меши строятся на CPU и гарантированно **охватывают** свои SDF, поэтому луч можно начинать прямо с их поверхности.
 - Отсечение по дальности: дальние объекты не попадают ни в геометрию, ни в SSBO, а у пограничных удаляются дальние треугольники.
 - Освещение: точечный источник, мягкие тени (отключаются задачей), ambient occlusion по числу шагов, туман и дизеринг.
@@ -249,6 +250,7 @@ LOAD_DLL Base/Userlib.dll
 | `task_SmgcSwapObjects` | `0` | — | Меняет буферы A и B местами и загружает геометрию A в VBO/EBO |
 | `task_SmgcSetOutline` | `3` | `bool enabled` | Включает или выключает оранжевый каркас. По умолчанию включён |
 | `task_SmgcSetShadows` | `9` | `bool enabled` | Включает или выключает тени. По умолчанию включены |
+| `task_SmgcSetRaymarching` | `10` | `bool enabled` | Включает или выключает ray-marching. Без него сцена рисуется в [полигональном режиме](#гибридный-рендеринг). По умолчанию включён |
 | `task_SmgcSetMaxDist` | `4` | `float maxDist` | Задаёт дальность прорисовки. Значение должно быть конечным и больше 0, иначе возвращается `-EINVAL` |
 | `task_SmgcSetCamera` | `5` | `Camera camera` | Задаёт позицию и углы камеры |
 | `task_SmgcSubscribeKey` | `6` | `int key` | Подписывает отправителя на клавишу |
@@ -332,6 +334,16 @@ sendTask(std::make_unique<task_SmgcSwapObjects>(), "SMGC");
 - если сфера пересекает границу, `CullFarTriangles` удаляет треугольники, у которых все 3 вершины дальше `maxDist`, и вершины, оставшиеся без треугольников;
 - объекты неизвестных типов не отсекаются никогда, `AntiCube` тоже.
 
+**Полигональный режим.** Если ray-marching выключен (`task_SmgcSetRaymarching`, `iRaymarch = 0`), проходы остаются те же, но во втором проходе фрагментный шейдер не запускает луч, а сразу закрашивает прокси-поверхность:
+
+- нормаль грани считается через `cross(dFdx(fragPos), dFdy(fragPos))` и разворачивается к камере, поэтому затенение плоское и каждая грань видна;
+- базовый цвет берётся из `data3.rgb` объекта в SSBO. Чтобы его найти, каждая вершина хранит `objectIdx` — номер объекта в `Objects_B`, который проставляет `pushObject`;
+- у пола `objectIdx = -1`, он закрашивается той же плиткой, что и в ray-marching. У `AntiCube` `objectIdx = -2`, он получает цвет тумана;
+- освещение — half-Lambert от того же точечного источника (2, 4, 2), без теней и ambient occlusion;
+- туман и дизеринг такие же, как в ray-marching.
+
+Объекты рисуются в форме своих прокси-мешей: шары и капсулы немного раздуты, фракталы выглядят как сфера или куб, а тип `-3` виден как обычная капсула.
+
 **Порядок обхода вершин.** Проекция левосторонняя, поэтому у видимого треугольника `cross(b - a, c - a)` по правилу правой руки смотрит **внутрь** фигуры. Включено отсечение задних граней (`GL_BACK`, `GL_CCW`).
 
 ### Шейдеры
@@ -339,6 +351,7 @@ sendTask(std::make_unique<task_SmgcSwapObjects>(), "SMGC");
 `files/default.vert` строит проекцию вручную, без матрицы MVP:
 
 - позиция вершины переводится в систему камеры: `mix(aPos - iCameraPos, aPos, aAttached)`. Вершины с `attached = 1` привязаны к камере и двигаются вместе с ней;
+- `aObjectIdx` передаётся во фрагментный шейдер без интерполяции (`flat`) как `fragObjectIdx`;
 - поворот камеры собирается из углов `iCameraRot` в градусах как `Rz · Rx · Ry`;
 - `w = z` в системе камеры, ближняя и дальняя плоскости — 0.01 и 1000;
 - поле зрения по меньшей стороне окна — около 53°, при растягивании окна картинка не искажается.
@@ -368,6 +381,7 @@ Uniform-переменные, которые `SMGC` задаёт каждый к
 | `iEpsilon` | `float` | `SMGC::epsilon` |
 | `iOutline` | `float` | `1` — быстрый выход с оранжевым цветом (prepass и каркас), `0` — ray-marching |
 | `iShadows` | `float` | `1` — тени включены, `0` — выключены |
+| `iRaymarch` | `float` | `1` — ray-marching, `0` — полигональный режим |
 
 Объекты передаются через SSBO `ObjectsBuffer` с `binding = 0`, массив `ObjectsData.items[]`.
 
@@ -413,6 +427,7 @@ Uniform-переменные, которые `SMGC` задаёт каждый к
 | `keySubscriptions` | `std::vector<KeySubscription>` | пусто | Подписки на клавиши |
 | `outlineEnabled` | `bool` | `true` | Рисовать ли каркас |
 | `shadowsEnabled` | `bool` | `true` | Считать ли тени |
+| `raymarchingEnabled` | `bool` | `true` | Рисовать ли ray-marching. Если `false` — полигональный режим |
 | `maxDist` | `float` | `50.0` | Дальность прорисовки и отсечения, размер `AntiCube` и пола |
 | `epsilon` | `float` | `0.0005` | Точность ray-marching и толщина прокси пола |
 | `windowWidth`, `windowHeight` | `int` | `800` | Размер окна, обновляется при растягивании |
@@ -425,11 +440,12 @@ Uniform-переменные, которые `SMGC` задаёт каждый к
 | `int init() override` | Инициализирует GLFW, создаёт окно с контекстом OpenGL 4.4 core и колбэком на изменение размера, загружает glad, включает тест глубины и отсечение задних граней, компилирует шейдеры, создаёт VAO, VBO, EBO и SSBO и связывает атрибуты: 0 — `pos`, 1 — `attached`. В конце собирает и показывает пустую сцену. Возвращает `0`, `-ENODEV`, если не удалось создать окно или загрузить glad, или код ошибки шейдера. |
 | `void windowResize()` | Вызывается при изменении размера окна. Пока пустой. |
 | `void swapObjects()` | Меняет местами буферы A и B и загружает вершины и индексы A в VBO и EBO. Перед загрузкой отвязывает VAO. |
-| `void clearObjects()` | Очищает буфер B и добавляет в него `AntiCube` вокруг камеры и прокси пола `Plane`. |
-| `void pushObject(std::unique_ptr<Object> obj)` | Отсекает объект по дальности, строит его прокси-меш в буфер B через `GenerateObject` и, если объект не отсечён целиком, добавляет его в `Objects_B`. `obj` не должен быть `nullptr`. |
+| `void clearObjects()` | Очищает буфер B и добавляет в него `AntiCube` вокруг камеры (`objectIdx = -2`) и прокси пола `Plane` (`objectIdx = -1`). |
+| `void pushObject(std::unique_ptr<Object> obj)` | Отсекает объект по дальности, строит его прокси-меш в буфер B через `GenerateObject` и, если объект не отсечён целиком, добавляет его в `Objects_B`. Вершинам меша проставляется `objectIdx` — номер объекта в `Objects_B`. `obj` не должен быть `nullptr`. |
 | `int draw()` | Очищает экран, загружает `Objects_A` в SSBO, задаёт uniform-переменные и рисует 3 прохода (см. [Гибридный рендеринг](#гибридный-рендеринг)). В конце отвязывает VAO. Возвращает `0` или `-ENODEV`, если буферы или шейдер не созданы. |
 | `void setOutline(bool enabled)` | Включает или выключает каркас. |
 | `void setShadows(bool enabled)` | Включает или выключает тени. |
+| `void setRaymarching(bool enabled)` | Включает или выключает ray-marching. |
 | `int setMaxDist(float newMaxDist)` | Задаёт дальность прорисовки. Возвращает `0` или `-EINVAL`, если значение не конечное или не больше 0. |
 | `void setCamera(const Camera& newCamera)` | Задаёт камеру. |
 | `int subscribeKey(int componentIdx, int key)` | Добавляет подписку, если её ещё нет. Возвращает `0` или `-EINVAL` для недопустимого кода клавиши. |
@@ -457,6 +473,7 @@ Uniform-переменные, которые `SMGC` задаёт каждый к
 | `task_SmgcUnsubscribeKey(int t_key)` | `7` | `int key` | `bool taskIs_SmgcUnsubscribeKey(uint32_t taskIdx)` |
 | `task_SmgcKeyState(int t_key, bool t_pressed)` | `8` | `int key`, `bool pressed` | `bool taskIs_SmgcKeyState(uint32_t taskIdx)` |
 | `task_SmgcSetShadows(bool t_enabled)` | `9` | `bool enabled` | `bool taskIs_SmgcSetShadows(uint32_t taskIdx)` |
+| `task_SmgcSetRaymarching(bool t_enabled)` | `10` | `bool enabled` | `bool taskIs_SmgcSetRaymarching(uint32_t taskIdx)` |
 
 ---
 
@@ -487,7 +504,7 @@ Uniform-переменные, которые `SMGC` задаёт каждый к
 | Метод | Описание |
 |-------|----------|
 | `VAO()` | Создаёт VAO. |
-| `void LinkVBO(VBO& VBO, GLuint layout, GLuint layoutAttached)` | Связывает атрибуты `Vertex::pos` (`vec3`) и `Vertex::attached` (`float`) с указанными location. |
+| `void LinkVBO(VBO& VBO, GLuint layout, GLuint layoutAttached, GLuint layoutObjectIdx)` | Связывает атрибуты `Vertex::pos` (`vec3`), `Vertex::attached` (`float`) и `Vertex::objectIdx` (`int`, через `glVertexAttribIPointer`) с указанными location. `SMGC` использует location 0, 1 и 2. |
 | `void Bind()`, `void Unbind()`, `void Delete()` | Привязать, отвязать, удалить. |
 
 ---
@@ -512,6 +529,7 @@ Uniform-переменные, которые `SMGC` задаёт каждый к
 |------|-----|----------|
 | `pos` | `glm::vec3` | Позиция |
 | `attached` | `float` | `0` — вершина в мировых координатах, `1` — привязана к камере |
+| `objectIdx` | `GLint` | Номер объекта в SSBO; `-1` — пол (значение по умолчанию), `-2` — `AntiCube` |
 
 ---
 
@@ -523,6 +541,7 @@ Uniform-переменные, которые `SMGC` задаёт каждый к
 |---------|----------|
 | `bool GenerateObject(vertices, indices, const Object& obj, float attached = 0)` | Строит прокси-меш объекта по `abs(type)`: `Sphere`, `Cube` или `Capsule`. Для типа `-1` берёт сферу радиусом 1.05 · r. Возвращает `false` для неизвестных типов. |
 | `float ObjectBoundingRadius(const Object& obj)` | Радиус описанной сферы объекта относительно `data1.yzw`. Возвращает `-1` для неизвестных типов. |
+| `void SetObjectIdx(vertices, size_t vertexStart, GLint objectIdx)` | Проставляет `objectIdx` всем вершинам, начиная с `vertexStart`. |
 | `void CullFarTriangles(vertices, indices, size_t vertexStart, size_t indexStart, const glm::vec3& center, float maxDist)` | Удаляет из диапазона, начиная с `vertexStart` / `indexStart`, треугольники, у которых все 3 вершины дальше `maxDist` от `center`, и неиспользуемые вершины. |
 | `void Sphere(vertices, indices, const Object& obj, float attached = 0)` | UV-сфера 16 × 32, раздутая до охвата шара. |
 | `void Cube(vertices, indices, const Object& obj, float attached = 0)` | Куб с половиной ребра `data2.x`. |

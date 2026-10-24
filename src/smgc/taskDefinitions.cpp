@@ -51,3 +51,8 @@ task_SmgcSetShadows::task_SmgcSetShadows(bool t_enabled): BaseTask(9), enabled(t
 bool taskIs_SmgcSetShadows(uint32_t taskIdx) {
     return taskIdx == 9;
 }
+
+task_SmgcSetRaymarching::task_SmgcSetRaymarching(bool t_enabled): BaseTask(10), enabled(t_enabled) {}
+bool taskIs_SmgcSetRaymarching(uint32_t taskIdx) {
+    return taskIdx == 10;
+}

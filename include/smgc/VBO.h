@@ -7,6 +7,7 @@
 struct Vertex {
     glm::vec3 pos;
     float attached; // 0.0 = world, 1.0 = camera
+    GLint objectIdx = -1;
 };
 
 class VBO {

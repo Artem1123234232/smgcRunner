@@ -1,8 +1,10 @@
 #version 460 core
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in float aAttached;
+layout (location = 2) in int aObjectIdx;
 
 out vec3 fragPos;
+flat out int fragObjectIdx;
 invariant gl_Position;
 
 uniform vec3 iCameraPos;
@@ -34,6 +36,7 @@ void main() {
     vec3 viewPos = R * relPos;
 
     fragPos = relPos;
+    fragObjectIdx = aObjectIdx;
 
     float minRes = min(iResolution.x, iResolution.y);
     float A = 2.0 * minRes / iResolution.x;

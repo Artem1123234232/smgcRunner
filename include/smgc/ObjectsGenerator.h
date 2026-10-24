@@ -21,4 +21,5 @@ void Capsule(std::vector<Vertex>& vertices, std::vector<GLuint>& indices, const 
 
 bool GenerateObject(std::vector<Vertex>& vertices, std::vector<GLuint>& indices, const Object& obj, float attached = 0.0f);
 float ObjectBoundingRadius(const Object& obj);
+void SetObjectIdx(std::vector<Vertex>& vertices, size_t vertexStart, GLint objectIdx);
 void CullFarTriangles(std::vector<Vertex>& vertices, std::vector<GLuint>& indices, size_t vertexStart, size_t indexStart, const glm::vec3& center, float maxDist);

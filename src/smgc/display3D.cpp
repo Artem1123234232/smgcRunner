@@ -70,7 +70,7 @@ int SMGC::init() {
     if (!objectsBuffer) {std::cerr << getPrefix() << "Critical Error: objectsBuffer is nullptr" << std::endl; return -ENODEV;}
     objectsBuffer->Bind(0);
 
-    vao->LinkVBO(*vbo, 0, 1);
+    vao->LinkVBO(*vbo, 0, 1, 2);
     
     vao->Unbind();
     vbo->Unbind();
@@ -101,6 +101,7 @@ void SMGC::clearObjects() {
 
     //Quad(Vertices_B, Indices_B);
     AntiCube(Vertices_B, Indices_B, maxDist, 1.0f);
+    SetObjectIdx(Vertices_B, 0, -2);
     Plane(Vertices_B, Indices_B, camera.pos, maxDist, -1.0f, epsilon);
 }
 void SMGC::pushObject(std::unique_ptr<Object> obj) {
@@ -112,6 +113,7 @@ void SMGC::pushObject(std::unique_ptr<Object> obj) {
     const size_t indexStart = Indices_B.size();
     if (GenerateObject(Vertices_B, Indices_B, *obj) && dist + bound > maxDist)
         CullFarTriangles(Vertices_B, Indices_B, vertexStart, indexStart, camera.pos, maxDist);
+    SetObjectIdx(Vertices_B, vertexStart, static_cast<GLint>(Objects_B.size()));
 
     Objects_B.push_back(std::move(*obj));
 }
@@ -129,6 +131,9 @@ void SMGC::setOutline(bool enabled) {
 }
 void SMGC::setShadows(bool enabled) {
     shadowsEnabled = enabled;
+}
+void SMGC::setRaymarching(bool enabled) {
+    raymarchingEnabled = enabled;
 }
 int SMGC::setMaxDist(float newMaxDist) {
     if (!std::isfinite(newMaxDist) || newMaxDist <= 0.0f) {
@@ -183,6 +188,7 @@ int SMGC::draw() {
     shaderProgram->setFloat("iMaxDist", maxDist);
     shaderProgram->setFloat("iEpsilon", epsilon);
     shaderProgram->setFloat("iShadows", shadowsEnabled ? 1.0f : 0.0f);
+    shaderProgram->setFloat("iRaymarch", raymarchingEnabled ? 1.0f : 0.0f);
     
     if (!vao) {std::cerr << getPrefix() << "Critical Error: vao is nullptr" << std::endl; return -ENODEV;}
     vao->Bind();
@@ -238,6 +244,9 @@ int SMGC::processTask(std::unique_ptr<BaseTask> task) {
     } else if (taskIs_SmgcSetShadows(taskIdx)) {
         auto* typed = static_cast<task_SmgcSetShadows*>(task.get());
         setShadows(typed->enabled);
+    } else if (taskIs_SmgcSetRaymarching(taskIdx)) {
+        auto* typed = static_cast<task_SmgcSetRaymarching*>(task.get());
+        setRaymarching(typed->enabled);
     } else if (taskIs_SmgcSetMaxDist(taskIdx)) {
         auto* typed = static_cast<task_SmgcSetMaxDist*>(task.get());
         return setMaxDist(typed->maxDist);

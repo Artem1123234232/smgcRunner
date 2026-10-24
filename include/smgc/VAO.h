@@ -8,7 +8,7 @@ public:
     GLuint ID;
     VAO();
 
-    void LinkVBO(VBO& VBO, GLuint layout, GLuint layoutAttached);
+    void LinkVBO(VBO& VBO, GLuint layout, GLuint layoutAttached, GLuint layoutObjectIdx);
 
     void Bind();
     void Unbind();

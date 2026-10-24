@@ -1,6 +1,7 @@
 #version 460 core
 layout(early_fragment_tests) in;
 in vec3 fragPos; // Интерполированная позиция фрагмента
+flat in int fragObjectIdx;
 out vec4 fragColor;
 
 #define ITERATIONS 1000
@@ -14,6 +15,7 @@ uniform vec3 iCameraRot;
 uniform float iOutline;
 uniform float iMaxDist;
 uniform float iShadows;
+uniform float iRaymarch;
 
 struct Object {
     vec4 data1;
@@ -170,16 +172,20 @@ float planeSDF(vec3 p) {
     return abs(p.y) - 0.5 * EPSILON;
 }
 
+vec3 tileColor(vec2 xz) {
+    vec3 colA = vec3(0.333);
+    vec3 colB = vec3(0.333 * 0.5);
+    float tile = step(clamp(abs(squareSDF(0.5, mod(xz, 1.0) - 0.5)), 0.0, 1.0), 0.025);
+
+    return mix(colA, colB, tile);
+}
+
 vec4 tilePlane(vec3 p) {
     float dist = planeSDF(p);
 
     if (dist >= EPSILON) return vec4(0.0, 0.0, 0.0, dist);
 
-    vec3 colA = vec3(0.333);
-    vec3 colB = vec3(0.333 * 0.5);
-    float tile = step(clamp(abs(squareSDF(0.5, mod(p.xz, 1.0) - 0.5)), 0.0, 1.0), 0.025);
-
-    vec3 col = mix(colA, colB, tile);
+    vec3 col = tileColor(p.xz);
 
     return vec4(col, dist);
     /*vec3 col = colA;
@@ -316,15 +322,38 @@ vec3 raymarch(vec3 ro, vec3 rd, float start) {
     return vec3(0.0);
 }
 
+vec3 polygonColor() {
+    if (fragObjectIdx == -2) return vec3(0.28);
+
+    vec3 p = iCameraPos + fragPos;
+
+    vec3 n = normalize(cross(dFdx(fragPos), dFdy(fragPos)));
+    if (dot(n, fragPos) > 0.0) n = -n;
+
+    vec3 col = (fragObjectIdx >= 0 && fragObjectIdx < ObjectsData.items.length())
+        ? ObjectsData.items[fragObjectIdx].data3.rgb
+        : tileColor(p.xz + 1.0);
+
+    vec3 l = normalize(vec3(2.0, 4.0, 2.0) - p);
+    col *= clamp(dot(n, l) * 0.5 + 0.5, 0.0, 1.0);
+
+    float fog = pow(clamp(length(fragPos) / iMaxDist, 0.0, 1.0), 2.0);
+    return col * (1.0 - fog) + 0.28 * fog;
+}
+
 void main() {
     if (iOutline > 0.5) {
         fragColor = vec4(1.0, 0.5, 0.0, 1.0);
         return;
     }
 
-    vec3 rd = normalize(fragPos);
-
-    vec3 col = raymarch(iCameraPos, rd, length(fragPos));
+    vec3 col;
+    if (iRaymarch > 0.5) {
+        vec3 rd = normalize(fragPos);
+        col = raymarch(iCameraPos, rd, length(fragPos));
+    } else {
+        col = polygonColor();
+    }
 
     // Дизеринг
     float noise = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);

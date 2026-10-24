@@ -211,6 +211,9 @@ float ObjectBoundingRadius(const Object& obj) {
         default: return -1.0f;
     }
 }
+void SetObjectIdx(std::vector<Vertex>& vertices, size_t vertexStart, GLint objectIdx) {
+    for (size_t i = vertexStart; i < vertices.size(); i++) vertices[i].objectIdx = objectIdx;
+}
 void CullFarTriangles(std::vector<Vertex>& vertices, std::vector<GLuint>& indices, size_t vertexStart, size_t indexStart, const glm::vec3& center, float maxDist) {
     const float maxDist2 = maxDist * maxDist;
     auto isFar = [&](GLuint i) {

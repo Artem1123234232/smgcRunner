@@ -78,3 +78,10 @@ public:
     bool enabled = true;
 };
 bool taskIs_SmgcSetShadows(uint32_t taskIdx);
+
+class task_SmgcSetRaymarching: public BaseTask {
+public:
+    task_SmgcSetRaymarching(bool t_enabled);
+    bool enabled = true;
+};
+bool taskIs_SmgcSetRaymarching(uint32_t taskIdx);
