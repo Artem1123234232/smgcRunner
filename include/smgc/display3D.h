@@ -76,8 +76,8 @@ private:
     std::unique_ptr<VBO> vbo = nullptr;
     std::unique_ptr<EBO> ebo = nullptr;
 
-    std::vector<Object> Objects_A{};
-    std::vector<Object> Objects_B{};
+    std::vector<GpuObject> Objects_A{};
+    std::vector<GpuObject> Objects_B{};
 
     std::vector<Vertex> Vertices_A{};
     std::vector<Vertex> Vertices_B{};

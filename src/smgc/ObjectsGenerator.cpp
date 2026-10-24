@@ -211,6 +211,14 @@ float ObjectBoundingRadius(const Object& obj) {
         default: return -1.0f;
     }
 }
+GpuObject ToGpuObject(const Object& obj) {
+    const glm::mat3 invRot = glm::transpose(ObjectRotation(glm::vec3(obj.data4)));
+    return {obj.data1, obj.data2, obj.data3, {
+        glm::vec4(invRot[0], 0.0f),
+        glm::vec4(invRot[1], 0.0f),
+        glm::vec4(invRot[2], 0.0f),
+    }};
+}
 void SetObjectIdx(std::vector<Vertex>& vertices, size_t vertexStart, GLint objectIdx) {
     for (size_t i = vertexStart; i < vertices.size(); i++) vertices[i].objectIdx = objectIdx;
 }

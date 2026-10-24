@@ -21,43 +21,12 @@ struct Object {
     vec4 data1;
     vec4 data2;
     vec4 data3;
-    vec4 data4;
+    mat3 invRot;
 };
 
 layout(std430, binding = 0) buffer ObjectsBuffer {
     Object items[];
 } ObjectsData;
-
-mat4 rotationMatrixX(float angle) {
-    float c = cos(angle);
-    float s = sin(angle);
-    return mat4(
-        vec4(1, 0, 0, 0),
-        vec4(0, c, -s, 0),
-        vec4(0, s, c, 0),
-        vec4(0, 0, 0, 1)
-    );
-}
-mat4 rotationMatrixY(float angle) {
-    float c = cos(angle);
-    float s = sin(angle);
-    return mat4(
-        vec4(c, 0, s, 0),
-        vec4(0, 1, 0, 0),
-        vec4(-s, 0, c, 0),
-        vec4(0, 0, 0, 1)
-    );
-}
-mat4 rotationMatrixZ(float angle) {
-    float c = cos(angle);
-    float s = sin(angle);
-    return mat4(
-        vec4(c, -s, 0, 0),
-        vec4(s, c, 0, 0),
-        vec4(0, 0, 1, 0),
-        vec4(0, 0, 0, 1)
-    );
-}
 
 float squareSDF(float radius, vec2 p) {
     vec2 d = abs(p) - radius;
@@ -214,12 +183,10 @@ mapResult map(vec3 p, bool simple) {
     for (int i = 0; i < ObjectsData.items.length(); ++i) {
         Object obj = ObjectsData.items[i];
         int type = int(round(obj.data1.x));
-        vec3 lp = p - obj.data1.yzw;
+        vec3 lp = obj.invRot * (p - obj.data1.yzw);
         float dx = iMaxDist;
         int a_type = abs(type);
         bool fractal_x = type < 0;
-        mat3 rot = mat3(rotationMatrixX(obj.data4.x)) * mat3(rotationMatrixY(obj.data4.y)) * mat3(rotationMatrixZ(obj.data4.z));
-        lp *= rot;
         if (!fractal_x || simple) {
             if (a_type == 1) {
                 dx = sphereSDF(obj.data2.x, lp);

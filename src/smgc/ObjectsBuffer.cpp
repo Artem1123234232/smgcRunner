@@ -4,10 +4,10 @@ ObjectsBuffer::ObjectsBuffer() {
     glGenBuffers(1, &ID);
 }
 
-void ObjectsBuffer::Upload(const std::vector<Object>& objects) {
+void ObjectsBuffer::Upload(const std::vector<GpuObject>& objects) {
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ID);
 
-    const size_t needed = sizeof(Object) * objects.size();
+    const size_t needed = sizeof(GpuObject) * objects.size();
 
     if (needed == capacityBytes && needed > 0) {
         // Размер тот же — просто перезаписываем

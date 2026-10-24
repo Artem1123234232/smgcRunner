@@ -115,7 +115,7 @@ void SMGC::pushObject(std::unique_ptr<Object> obj) {
         CullFarTriangles(Vertices_B, Indices_B, vertexStart, indexStart, camera.pos, maxDist);
     SetObjectIdx(Vertices_B, vertexStart, static_cast<GLint>(Objects_B.size()));
 
-    Objects_B.push_back(std::move(*obj));
+    Objects_B.push_back(ToGpuObject(*obj));
 }
 /*void SMGC::getCamera(glm::vec3 newPos, glm::vec3 newRot) {
     camera.pos = newPos;

@@ -284,7 +284,16 @@ sendTask(std::make_unique<task_SmgcSwapObjects>(), "SMGC");
 
 ### Формат объекта `Object`
 
-`Object` — 4 × `glm::vec4`, 64 байта, раскладка std430. Та же структура объявлена в `default.frag`, и они должны совпадать. Краткое описание полей лежит в `files/разметка.txt`.
+`Object` — 4 × `glm::vec4`, 64 байта. В таком виде объект отправляют в `SMGC` задачей `task_SmgcPushObject`. Краткое описание полей лежит в `files/разметка.txt`.
+
+В шейдер уходит не сам `Object`, а `GpuObject`: `pushObject` переводит объект функцией `ToGpuObject`. Матрица поворота считается один раз на CPU, поэтому шейдеру не нужно считать синусы и косинусы в каждом вызове `map`.
+
+| Поле `GpuObject` | Тип | Откуда |
+|------------------|-----|--------|
+| `data1`, `data2`, `data3` | `glm::vec4` | Копируются из `Object` |
+| `invRot[3]` | `glm::vec4` × 3 | Столбцы матрицы мир → объект `transpose(Rx · Ry · Rz)`, `w = 0` |
+
+`GpuObject` занимает 96 байт с раскладкой std430. В `default.frag` ему соответствует структура `Object` с полем `mat3 invRot`: столбцы `mat3` в std430 идут с шагом 16 байт. Обе структуры должны совпадать.
 
 | Поле | `.x` | `.y` | `.z` | `.w` |
 |------|------|------|------|------|
@@ -294,7 +303,7 @@ sendTask(std::make_unique<task_SmgcSwapObjects>(), "SMGC");
 | `data4` | поворот вокруг X | поворот вокруг Y | поворот вокруг Z | — |
 
 - Тип хранится как `float` и округляется до целого.
-- Поворот задаётся в **радианах** и применяется как `Rx · Ry · Rz` в шейдере и в генераторе геометрии одинаково.
+- Поворот задаётся в **радианах** как `Rx · Ry · Rz`. Генератор геометрии поворачивает меш этой матрицей, а шейдер переводит точку в систему объекта транспонированной матрицей `invRot`.
 - Цвет берётся из `data3.rgb`, альфа-канал пока не используется.
 
 | Тип | Объект | Параметры | Прокси-меш |
@@ -383,7 +392,7 @@ Uniform-переменные, которые `SMGC` задаёт каждый к
 | `iShadows` | `float` | `1` — тени включены, `0` — выключены |
 | `iRaymarch` | `float` | `1` — ray-marching, `0` — полигональный режим |
 
-Объекты передаются через SSBO `ObjectsBuffer` с `binding = 0`, массив `ObjectsData.items[]`.
+Объекты передаются через SSBO `ObjectsBuffer` с `binding = 0`, массив `ObjectsData.items[]` из `GpuObject`. В `map` точка переводится в систему объекта одним умножением: `obj.invRot * (p - obj.data1.yzw)`.
 
 `files/default copy.frag` — старый полноэкранный ray-marcher, он оставлен для сравнения и не загружается. Если меняется SDF в шейдере, нужно поменять и его прокси в `ObjectsGenerator` (`GenerateObject` и `ObjectBoundingRadius`).
 
@@ -420,7 +429,7 @@ Uniform-переменные, которые `SMGC` задаёт каждый к
 | `shaderProgram` | `std::unique_ptr<Shader>` | `nullptr` | Программа из `default.vert` и `default.frag` |
 | `vao`, `vbo`, `ebo` | `std::unique_ptr<VAO/VBO/EBO>` | `nullptr` | Буферы геометрии прокси-мешей |
 | `objectsBuffer` | `std::unique_ptr<ObjectsBuffer>` | `nullptr` | SSBO с объектами, `binding = 0` |
-| `Objects_A`, `Objects_B` | `std::vector<Object>` | пусто | Объекты: A — на экране, B — собираемый |
+| `Objects_A`, `Objects_B` | `std::vector<GpuObject>` | пусто | Объекты для SSBO: A — на экране, B — собираемый |
 | `Vertices_A`, `Vertices_B` | `std::vector<Vertex>` | пусто | Вершины прокси-мешей |
 | `Indices_A`, `Indices_B` | `std::vector<GLuint>` | пусто | Индексы прокси-мешей |
 | `camera` | `Camera` | `{0,0,0}, {0,0,0}` | Камера, задаётся задачей `task_SmgcSetCamera` |
@@ -441,7 +450,7 @@ Uniform-переменные, которые `SMGC` задаёт каждый к
 | `void windowResize()` | Вызывается при изменении размера окна. Пока пустой. |
 | `void swapObjects()` | Меняет местами буферы A и B и загружает вершины и индексы A в VBO и EBO. Перед загрузкой отвязывает VAO. |
 | `void clearObjects()` | Очищает буфер B и добавляет в него `AntiCube` вокруг камеры (`objectIdx = -2`) и прокси пола `Plane` (`objectIdx = -1`). |
-| `void pushObject(std::unique_ptr<Object> obj)` | Отсекает объект по дальности, строит его прокси-меш в буфер B через `GenerateObject` и, если объект не отсечён целиком, добавляет его в `Objects_B`. Вершинам меша проставляется `objectIdx` — номер объекта в `Objects_B`. `obj` не должен быть `nullptr`. |
+| `void pushObject(std::unique_ptr<Object> obj)` | Отсекает объект по дальности, строит его прокси-меш в буфер B через `GenerateObject` и, если объект не отсечён целиком, добавляет его в `Objects_B` через `ToGpuObject`. Вершинам меша проставляется `objectIdx` — номер объекта в `Objects_B`. `obj` не должен быть `nullptr`. |
 | `int draw()` | Очищает экран, загружает `Objects_A` в SSBO, задаёт uniform-переменные и рисует 3 прохода (см. [Гибридный рендеринг](#гибридный-рендеринг)). В конце отвязывает VAO. Возвращает `0` или `-ENODEV`, если буферы или шейдер не созданы. |
 | `void setOutline(bool enabled)` | Включает или выключает каркас. |
 | `void setShadows(bool enabled)` | Включает или выключает тени. |
@@ -519,7 +528,7 @@ Uniform-переменные, которые `SMGC` задаёт каждый к
 |-------|-------|--------|--------|
 | `VBO` | `GL_ARRAY_BUFFER` | `std::vector<Vertex>` | `Upload`, `Bind`, `Unbind`, `Delete` |
 | `EBO` | `GL_ELEMENT_ARRAY_BUFFER` | `std::vector<GLuint>` | `Upload`, `Bind`, `Unbind`, `Delete` |
-| `ObjectsBuffer` | `GL_SHADER_STORAGE_BUFFER` | `std::vector<Object>` | `Upload`, `Bind(int bind)` — привязка к точке `binding`, `Delete` |
+| `ObjectsBuffer` | `GL_SHADER_STORAGE_BUFFER` | `std::vector<GpuObject>` | `Upload`, `Bind(int bind)` — привязка к точке `binding`, `Delete` |
 
 `Upload` у EBO привязывает буфер к `GL_ELEMENT_ARRAY_BUFFER` и отвязывает его в конце. Если в этот момент привязан VAO, EBO отвяжется и от него, поэтому EBO загружается только без привязанного VAO.
 
@@ -541,6 +550,7 @@ Uniform-переменные, которые `SMGC` задаёт каждый к
 |---------|----------|
 | `bool GenerateObject(vertices, indices, const Object& obj, float attached = 0)` | Строит прокси-меш объекта по `abs(type)`: `Sphere`, `Cube` или `Capsule`. Для типа `-1` берёт сферу радиусом 1.05 · r. Возвращает `false` для неизвестных типов. |
 | `float ObjectBoundingRadius(const Object& obj)` | Радиус описанной сферы объекта относительно `data1.yzw`. Возвращает `-1` для неизвестных типов. |
+| `GpuObject ToGpuObject(const Object& obj)` | Копирует `data1`–`data3` и считает `invRot = transpose(Rx · Ry · Rz)` по углам из `data4`. |
 | `void SetObjectIdx(vertices, size_t vertexStart, GLint objectIdx)` | Проставляет `objectIdx` всем вершинам, начиная с `vertexStart`. |
 | `void CullFarTriangles(vertices, indices, size_t vertexStart, size_t indexStart, const glm::vec3& center, float maxDist)` | Удаляет из диапазона, начиная с `vertexStart` / `indexStart`, треугольники, у которых все 3 вершины дальше `maxDist` от `center`, и неиспользуемые вершины. |
 | `void Sphere(vertices, indices, const Object& obj, float attached = 0)` | UV-сфера 16 × 32, раздутая до охвата шара. |
@@ -571,7 +581,7 @@ Uniform-переменные, которые `SMGC` задаёт каждый к
 - **Новые файлы** `.cpp` и `.h` добавляются в список исходников `CMakeLists.txt` вручную, поиска по маске нет.
 - **Новая задача** получает уникальный `taskIdx`, функцию `taskIs_*` и ветку в `SMGC::processTask`.
 - **Новый тип объекта** добавляется в 3 места: SDF в `default.frag` (`map`), прокси-меш в `GenerateObject` и радиус в `ObjectBoundingRadius`. Прокси обязан охватывать SDF.
-- **`Object`** в C++ и в GLSL должен совпадать, размер проверяется `static_assert`.
+- **`GpuObject`** в C++ и `Object` в GLSL должны совпадать, размер проверяется `static_assert`.
 - **Подписчик на клавиши** обязан отписаться от всех клавиш в своём `death()`.
 
 ## Пример: свой компонент-сцена
@@ -635,7 +645,7 @@ smgc/
 │   ├── display3D.h             Компонент SMGC, подключает все остальные заголовки
 │   ├── Camera.h                Структура Camera
 │   ├── taskDefinitions.h       Задачи SMGC: сцена, камера, настройки, подписка на клавиши
-│   ├── ObjectsBuffer.h         Структура Object и SSBO
+│   ├── ObjectsBuffer.h         Структуры Object и GpuObject, SSBO
 │   ├── ObjectsGenerator.h      Генераторы прокси-мешей и отсечение по дальности
 │   ├── shaderClass.h           Шейдерная программа
 │   ├── VAO.h                   Vertex Array Object
