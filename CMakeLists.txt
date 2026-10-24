@@ -33,7 +33,7 @@ find_package(glm REQUIRED)
 
 include(FetchContent)
 FetchContent_Declare(smpb
-  GIT_REPOSITORY https://github.com/Artem1123234232/SMPB.git
+  GIT_REPOSITORY https://github.com/s1m-ila/SMPB.git
   GIT_TAG        main
 )
 FetchContent_MakeAvailable(smpb)
@@ -54,6 +54,25 @@ add_executable(smgcRunner
 
   Scene/Scene.h  Scene/Scene.cpp
 )
+
+# --- FILES ---
+set(FILES
+    "core.config"
+    "SMGC/default.vert"
+    "SMGC/default.frag"
+)
+
+foreach(FILE ${FILES})
+    get_filename_component(FILENAME ${FILE} NAME)
+    
+    add_custom_command(
+        TARGET smgcRunner POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/${FILE}"
+        "$<TARGET_FILE_DIR:smgcRunner>/files/${FILENAME}"
+        COMMENT "Copying file ${FILENAME} to build directory..."
+    )
+endforeach()
 
 target_link_libraries(smgcRunner PRIVATE
     smpb::core

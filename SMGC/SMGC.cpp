@@ -50,7 +50,7 @@ int SMGC::init() {
 
     glViewport(0, 0, windowWidth, windowHeight);
 
-    shaderProgram = std::make_unique<Shader>("SMGC/default.vert", "SMGC/default.frag");
+    shaderProgram = std::make_unique<Shader>("files/default.vert", "files/default.frag");
     if (!shaderProgram) {std::cerr << getPrefix() << "Critical Error: shaderProgram is nullptr" << std::endl; return -ENODEV;}
     errorCode = shaderProgram->getStatus();
     if (errorCode != 0) {std::cerr << getPrefix() << "Critical Error: shaderProgram status code is " << std::to_string(errorCode) << std::endl; return errorCode;}
