@@ -38,9 +38,11 @@
 // Objects Generator
 #include "ObjectsGenerator.h"
 
-struct Camera {
-    glm::vec3 pos;
-    glm::vec3 rot;
+#include "Camera.h"
+
+struct KeySubscription {
+    int componentIdx;
+    int key;
 };
 
 class SMGC: public BaseComponent
@@ -52,8 +54,13 @@ public:
     void swapObjects();
     void clearObjects();
     void pushObject(std::unique_ptr<Object> obj);
+    void setOutline(bool enabled);
+    int setMaxDist(float newMaxDist);
+    void setCamera(const Camera& newCamera);
+    int subscribeKey(int componentIdx, int key);
+    int unsubscribeKey(int componentIdx, int key);
+    void sendKeyStates();
     int draw();
-    int keyboard();
     int processTask(std::unique_ptr<BaseTask> task) override;
     int tick(long long tickCounter) override;
     void death() override;
@@ -79,12 +86,9 @@ private:
 
     Camera camera{{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}};
 
-    float standartMoveSpeed = 3.0f;
-    float standartRotSpeed  = 90.0f;
+    std::vector<KeySubscription> keySubscriptions{};
 
-    float moveSpeed = standartMoveSpeed;
-    float rotSpeed  = standartRotSpeed;
-
+    bool outlineEnabled = true;
     float maxDist = 50.0f;
     float epsilon = 0.0005f;
 

@@ -124,72 +124,43 @@ void SMGC::setCamera(glm::vec3 newPos, glm::vec3 newRot) {
     camera.rot = newRot;
 }*/
 
-int SMGC::keyboard() {
-    float dt = 1.0f / float(Core_getTPS());
-
-    if (glfwGetKey(window, GLFW_KEY_LEFT)  == GLFW_PRESS) camera.rot.y += rotSpeed * dt;
-    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) camera.rot.y -= rotSpeed * dt;
-    if (glfwGetKey(window, GLFW_KEY_UP)    == GLFW_PRESS) camera.rot.x += rotSpeed * dt;
-    if (glfwGetKey(window, GLFW_KEY_DOWN)  == GLFW_PRESS) camera.rot.x -= rotSpeed * dt;
-    
-    // ограничение pitch, чтобы не было переворота (gimbal-lock)
-    camera.rot.x = std::clamp(camera.rot.x, -89.0f, 89.0f);
-    
-    // ограничение yaw чтобы не было бесконечного увеличения числа
-    camera.rot.y = std::fmod(camera.rot.y, 360.0f);
-
-    // пересчитываем углы
-    float yaw   = glm::radians(camera.rot.y);
-    float pitch = glm::radians(camera.rot.x);
-
-    // --- направления ---
-    glm::vec3 forward = {0.0f, 0.0f, 0.0f};
-    forward.x = -cos(pitch) * sin(yaw);
-    forward.y =  sin(pitch);
-    forward.z =  cos(pitch) * cos(yaw);
-
-    glm::vec3 right;
-    right.x = cos(yaw);
-    right.y = 0.0f;
-    right.z = sin(yaw);
-
-    // --- ДВИЖЕНИЕ (WASD) ---
-    float step = moveSpeed * dt;
-
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) camera.pos += forward * step;
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) camera.pos -= forward * step;
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) camera.pos += right   * step;
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) camera.pos -= right   * step;
-
-
-    if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
-        camera.rot.x = round(camera.rot.x / 45.0f) * 45.0f;
-        camera.rot.y = round(camera.rot.y / 45.0f) * 45.0f;
-        camera.rot.z = round(camera.rot.z / 45.0f) * 45.0f;
-        camera.pos.x = floor(camera.pos.x) + 0.5;
-        camera.pos.y = floor(camera.pos.y) + 0.5;
-        camera.pos.z = floor(camera.pos.z) + 0.5;
+void SMGC::setOutline(bool enabled) {
+    outlineEnabled = enabled;
+}
+int SMGC::setMaxDist(float newMaxDist) {
+    if (!std::isfinite(newMaxDist) || newMaxDist <= 0.0f) {
+        std::cerr << getPrefix() << "Error in SMGC::setMaxDist: invalid maxDist " << std::to_string(newMaxDist) << std::endl;
+        return -EINVAL;
     }
-
-    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
-        camera.rot = {0.0f, 0.0f, 0.0f};
-        camera.pos = {0.0f, 0.0f, 0.0f};
-        moveSpeed = standartMoveSpeed;
-        rotSpeed = standartRotSpeed;
-    }
-
-    if (localTickCounter % 10 == 0) {
-        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
-            rotSpeed /= 2.0f;
-            moveSpeed /= 2.0f;
-        }
-        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
-            rotSpeed *= 2.0f;
-            moveSpeed *= 2.0f;
-        }
-    }
-
+    maxDist = newMaxDist;
     return 0;
+}
+void SMGC::setCamera(const Camera& newCamera) {
+    camera = newCamera;
+}
+int SMGC::subscribeKey(int componentIdx, int key) {
+    if (key < GLFW_KEY_SPACE || key > GLFW_KEY_LAST) {
+        std::cerr << getPrefix() << "Error in SMGC::subscribeKey: invalid key " << std::to_string(key) << std::endl;
+        return -EINVAL;
+    }
+    for (const auto& subscription : keySubscriptions) {
+        if (subscription.componentIdx == componentIdx && subscription.key == key) return 0;
+    }
+    keySubscriptions.push_back({componentIdx, key});
+    return 0;
+}
+int SMGC::unsubscribeKey(int componentIdx, int key) {
+    std::erase_if(keySubscriptions, [&](const KeySubscription& subscription) {
+        return subscription.componentIdx == componentIdx && subscription.key == key;
+    });
+    return 0;
+}
+void SMGC::sendKeyStates() {
+    const std::vector<KeySubscription> subscriptions = keySubscriptions;
+    for (const auto& subscription : subscriptions) {
+        bool pressed = glfwGetKey(window, subscription.key) == GLFW_PRESS;
+        sendTask(std::make_unique<task_SmgcKeyState>(subscription.key, pressed), subscription.componentIdx);
+    }
 }
 
 int SMGC::draw() {
@@ -232,12 +203,15 @@ int SMGC::draw() {
     glDepthFunc(GL_LESS);
     glDepthMask(GL_TRUE);
 
-    // 2) обводка
-    shaderProgram->setFloat("iOutline", 1.0f);
     glDisable(GL_POLYGON_OFFSET_FILL);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glLineWidth(1.0f);
-    glDrawElements(GL_TRIANGLES, Indices_A.size(), GL_UNSIGNED_INT, 0);
+
+    // 2) обводка
+    if (outlineEnabled) {
+        shaderProgram->setFloat("iOutline", 1.0f);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glLineWidth(1.0f);
+        glDrawElements(GL_TRIANGLES, Indices_A.size(), GL_UNSIGNED_INT, 0);
+    }
 
     vao->Unbind();
 
@@ -254,6 +228,21 @@ int SMGC::processTask(std::unique_ptr<BaseTask> task) {
         auto* typed = static_cast<task_SmgcPushObject*>(task.get());
         pushObject(std::move(typed->obj));
         typed->obj = nullptr;
+    } else if (taskIs_SmgcSetOutline(taskIdx)) {
+        auto* typed = static_cast<task_SmgcSetOutline*>(task.get());
+        setOutline(typed->enabled);
+    } else if (taskIs_SmgcSetMaxDist(taskIdx)) {
+        auto* typed = static_cast<task_SmgcSetMaxDist*>(task.get());
+        return setMaxDist(typed->maxDist);
+    } else if (taskIs_SmgcSetCamera(taskIdx)) {
+        auto* typed = static_cast<task_SmgcSetCamera*>(task.get());
+        setCamera(typed->camera);
+    } else if (taskIs_SmgcSubscribeKey(taskIdx)) {
+        auto* typed = static_cast<task_SmgcSubscribeKey*>(task.get());
+        return subscribeKey(task->getCreatorIdx(), typed->key);
+    } else if (taskIs_SmgcUnsubscribeKey(taskIdx)) {
+        auto* typed = static_cast<task_SmgcUnsubscribeKey*>(task.get());
+        return unsubscribeKey(task->getCreatorIdx(), typed->key);
     }
     return 0;
 }
@@ -264,7 +253,7 @@ int SMGC::tick(long long tickCounter) {
         Core_stop();
     } else {
         //camera.pos = {0.0f, 0.0f, sin(float(localTickCounter) / float(Core_getTPS())) * 5.0f};
-        keyboard();
+        sendKeyStates();
 
         if (Core_isDebugModeEnabled()) std::clog << getPrefix() << "camera.pos: " << std::to_string(camera.pos.x) << ";" << std::to_string(camera.pos.y) << ";" << std::to_string(camera.pos.z) << std::endl;
         if (Core_isDebugModeEnabled()) std::clog << getPrefix() << "camera.rot: " << std::to_string(camera.rot.x) << ";" << std::to_string(camera.rot.y) << ";" << std::to_string(camera.rot.z) << std::endl;
@@ -279,6 +268,7 @@ int SMGC::tick(long long tickCounter) {
 }
 
 void SMGC::death() {
+    keySubscriptions.clear();
     if (vao) vao->Delete();
     if (vbo) vbo->Delete();
     if (ebo) ebo->Delete();

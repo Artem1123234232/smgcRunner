@@ -5,6 +5,7 @@
 
 // Object class
 #include "ObjectsBuffer.h"
+#include "Camera.h"
 
 // For unique_ptr
 #include <memory>
@@ -27,3 +28,46 @@ public:
     std::unique_ptr<Object> obj = nullptr;
 };
 bool taskIs_SmgcPushObject(uint32_t taskIdx);
+
+class task_SmgcSetOutline: public BaseTask {
+public:
+    task_SmgcSetOutline(bool t_enabled);
+    bool enabled = true;
+};
+bool taskIs_SmgcSetOutline(uint32_t taskIdx);
+
+class task_SmgcSetMaxDist: public BaseTask {
+public:
+    task_SmgcSetMaxDist(float t_maxDist);
+    float maxDist = 0.0f;
+};
+bool taskIs_SmgcSetMaxDist(uint32_t taskIdx);
+
+class task_SmgcSetCamera: public BaseTask {
+public:
+    task_SmgcSetCamera(const Camera& t_camera);
+    Camera camera{};
+};
+bool taskIs_SmgcSetCamera(uint32_t taskIdx);
+
+class task_SmgcSubscribeKey: public BaseTask {
+public:
+    task_SmgcSubscribeKey(int t_key);
+    int key = 0;
+};
+bool taskIs_SmgcSubscribeKey(uint32_t taskIdx);
+
+class task_SmgcUnsubscribeKey: public BaseTask {
+public:
+    task_SmgcUnsubscribeKey(int t_key);
+    int key = 0;
+};
+bool taskIs_SmgcUnsubscribeKey(uint32_t taskIdx);
+
+class task_SmgcKeyState: public BaseTask {
+public:
+    task_SmgcKeyState(int t_key, bool t_pressed);
+    int key = 0;
+    bool pressed = false;
+};
+bool taskIs_SmgcKeyState(uint32_t taskIdx);

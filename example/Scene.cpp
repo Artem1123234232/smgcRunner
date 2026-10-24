@@ -3,11 +3,110 @@
 // Core class
 #include <smpb/Core.h>
 
+#include <array>
+
+static constexpr std::array<int, 12> kKeys = {
+    GLFW_KEY_LEFT, GLFW_KEY_RIGHT, GLFW_KEY_UP, GLFW_KEY_DOWN,
+    GLFW_KEY_W, GLFW_KEY_A, GLFW_KEY_S, GLFW_KEY_D,
+    GLFW_KEY_Q, GLFW_KEY_E, GLFW_KEY_C, GLFW_KEY_R,
+};
+
 Scene::Scene() : BaseComponent("Scene") {
     // Constructor
 }
 
+int Scene::init() {
+    for (int key : kKeys) {
+        int errorCode = sendTask(std::make_unique<task_SmgcSubscribeKey>(key), "SMGC");
+        if (errorCode != 0) return errorCode;
+    }
+    return 0;
+}
+
+int Scene::processTask(std::unique_ptr<BaseTask> task) {
+    if (taskIs_SmgcKeyState(task->getIdx())) {
+        auto* typed = static_cast<task_SmgcKeyState*>(task.get());
+        pressedKeys[typed->key] = typed->pressed;
+        return 0;
+    }
+    return -EINVAL;
+}
+
+bool Scene::isPressed(int key) const {
+    auto it = pressedKeys.find(key);
+    return it != pressedKeys.end() && it->second;
+}
+
+void Scene::keyboard(long long tickCounter) {
+    float dt = 1.0f / float(Core_getTPS());
+
+    if (isPressed(GLFW_KEY_LEFT))  camera.rot.y += rotSpeed * dt;
+    if (isPressed(GLFW_KEY_RIGHT)) camera.rot.y -= rotSpeed * dt;
+    if (isPressed(GLFW_KEY_UP))    camera.rot.x += rotSpeed * dt;
+    if (isPressed(GLFW_KEY_DOWN))  camera.rot.x -= rotSpeed * dt;
+    
+    // ограничение pitch, чтобы не было переворота (gimbal-lock)
+    camera.rot.x = std::clamp(camera.rot.x, -89.0f, 89.0f);
+    
+    // ограничение yaw чтобы не было бесконечного увеличения числа
+    camera.rot.y = std::fmod(camera.rot.y, 360.0f);
+
+    // пересчитываем углы
+    float yaw   = glm::radians(camera.rot.y);
+    float pitch = glm::radians(camera.rot.x);
+
+    // --- направления ---
+    glm::vec3 forward = {0.0f, 0.0f, 0.0f};
+    forward.x = -cos(pitch) * sin(yaw);
+    forward.y =  sin(pitch);
+    forward.z =  cos(pitch) * cos(yaw);
+
+    glm::vec3 right;
+    right.x = cos(yaw);
+    right.y = 0.0f;
+    right.z = sin(yaw);
+
+    // --- ДВИЖЕНИЕ (WASD) ---
+    float step = moveSpeed * dt;
+
+    if (isPressed(GLFW_KEY_W)) camera.pos += forward * step;
+    if (isPressed(GLFW_KEY_S)) camera.pos -= forward * step;
+    if (isPressed(GLFW_KEY_D)) camera.pos += right   * step;
+    if (isPressed(GLFW_KEY_A)) camera.pos -= right   * step;
+
+
+    if (isPressed(GLFW_KEY_C)) {
+        camera.rot.x = round(camera.rot.x / 45.0f) * 45.0f;
+        camera.rot.y = round(camera.rot.y / 45.0f) * 45.0f;
+        camera.rot.z = round(camera.rot.z / 45.0f) * 45.0f;
+        camera.pos.x = floor(camera.pos.x) + 0.5;
+        camera.pos.y = floor(camera.pos.y) + 0.5;
+        camera.pos.z = floor(camera.pos.z) + 0.5;
+    }
+
+    if (isPressed(GLFW_KEY_R)) {
+        camera.rot = {0.0f, 0.0f, 0.0f};
+        camera.pos = {0.0f, 0.0f, 0.0f};
+        moveSpeed = standartMoveSpeed;
+        rotSpeed = standartRotSpeed;
+    }
+
+    if (tickCounter % 10 == 0) {
+        if (isPressed(GLFW_KEY_Q)) {
+            rotSpeed /= 2.0f;
+            moveSpeed /= 2.0f;
+        }
+        if (isPressed(GLFW_KEY_E)) {
+            rotSpeed *= 2.0f;
+            moveSpeed *= 2.0f;
+        }
+    }
+}
+
 int Scene::tick(long long tickCounter) {
+    keyboard(tickCounter);
+    sendTask(std::make_unique<task_SmgcSetCamera>(camera), "SMGC");
+
     sendTask(std::make_unique<task_SmgcClearObjects>(), "SMGC");
     
     float time = float(tickCounter) / float(Core_getTPS());
@@ -75,4 +174,8 @@ int Scene::tick(long long tickCounter) {
     
     sendTask(std::make_unique<task_SmgcSwapObjects>(), "SMGC");
     return 0;
+}
+
+void Scene::death() {
+    for (int key : kKeys) sendTask(std::make_unique<task_SmgcUnsubscribeKey>(key), "SMGC");
 }

@@ -4,7 +4,6 @@ in vec3 fragPos; // Интерполированная позиция фрагм
 out vec4 fragColor;
 
 #define ITERATIONS 1000
-#define MAX_DISTANCE 50.0
 #define EPSILON iEpsilon
 
 uniform float iEpsilon;
@@ -13,6 +12,7 @@ uniform vec2 iResolution;
 uniform vec3 iCameraPos;
 uniform vec3 iCameraRot;
 uniform float iOutline;
+uniform float iMaxDist;
 
 struct Object {
     vec4 data1;
@@ -208,7 +208,7 @@ mapResult map(vec3 p, bool simple) {
         Object obj = ObjectsData.items[i];
         int type = int(round(obj.data1.x));
         vec3 lp = p - obj.data1.yzw;
-        float dx = MAX_DISTANCE;
+        float dx = iMaxDist;
         int a_type = abs(type);
         bool fractal_x = type < 0;
         mat3 rot = mat3(rotationMatrixX(obj.data4.x)) * mat3(rotationMatrixY(obj.data4.y)) * mat3(rotationMatrixZ(obj.data4.z));
@@ -294,7 +294,7 @@ vec3 calcColor(vec3 p, vec3 ro, int i, float d) {
     col *= pow(1.0 - (float(i) / float(ITERATIONS) * 2.0), 2.0);
 
     // fog
-    float fog = pow(clamp(distance(p, ro) / MAX_DISTANCE, 0.0, 1.0), 2.0);
+    float fog = pow(clamp(distance(p, ro) / iMaxDist, 0.0, 1.0), 2.0);
     col = col * (1.0 - fog) + 0.28 * fog;
     
     return col;
@@ -302,12 +302,12 @@ vec3 calcColor(vec3 p, vec3 ro, int i, float d) {
 
 vec3 raymarch(vec3 ro, vec3 rd, float start) {
     float total_distance_traveled = start;
-    if (total_distance_traveled > MAX_DISTANCE) return vec3(0.28);
+    if (total_distance_traveled > iMaxDist) return vec3(0.28);
     for (int i = 0; i < ITERATIONS; i++)
     {
         vec3 p = ro + total_distance_traveled * rd;
         float d = map(p, false).dist;
-        if (total_distance_traveled > MAX_DISTANCE || d < EPSILON) {
+        if (total_distance_traveled > iMaxDist || d < EPSILON) {
             return calcColor(p, ro, i, d);
         }
         total_distance_traveled += d;
