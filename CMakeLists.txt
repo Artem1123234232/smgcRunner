@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(smgcRunner LANGUAGES C CXX)   # <- добавил C
+project(smgc LANGUAGES C CXX)   # <- добавил C
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Release)
@@ -38,7 +38,7 @@ FetchContent_Declare(smpb
 )
 FetchContent_MakeAvailable(smpb)
 
-add_executable(smgcRunner
+add_executable(smgc
   main.cpp
   #AndroidFix.cpp
   
@@ -66,15 +66,15 @@ foreach(FILE ${FILES})
     get_filename_component(FILENAME ${FILE} NAME)
     
     add_custom_command(
-        TARGET smgcRunner POST_BUILD
+        TARGET smgc POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_CURRENT_SOURCE_DIR}/${FILE}"
-        "$<TARGET_FILE_DIR:smgcRunner>/files/${FILENAME}"
+        "$<TARGET_FILE_DIR:smgc>/files/${FILENAME}"
         COMMENT "Copying file ${FILENAME} to build directory..."
     )
 endforeach()
 
-target_link_libraries(smgcRunner PRIVATE
+target_link_libraries(smgc PRIVATE
     smpb::core
     glad
     glfw
@@ -85,11 +85,11 @@ target_link_libraries(smgcRunner PRIVATE
 include(CheckIPOSupported)
 check_ipo_supported(RESULT ipo_ok)
 if(ipo_ok)
-  set_property(TARGET smgcRunner PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
+  set_property(TARGET smgc PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
 endif()
 
 include(GNUInstallDirs)
-install(TARGETS smgcRunner
+install(TARGETS smgc
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
