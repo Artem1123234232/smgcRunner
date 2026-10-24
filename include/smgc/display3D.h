@@ -55,6 +55,7 @@ public:
     void clearObjects();
     void pushObject(std::unique_ptr<Object> obj);
     void setOutline(bool enabled);
+    void setShadows(bool enabled);
     int setMaxDist(float newMaxDist);
     void setCamera(const Camera& newCamera);
     int subscribeKey(int componentIdx, int key);
@@ -89,6 +90,7 @@ private:
     std::vector<KeySubscription> keySubscriptions{};
 
     bool outlineEnabled = true;
+    bool shadowsEnabled = true;
     float maxDist = 50.0f;
     float epsilon = 0.0005f;
 

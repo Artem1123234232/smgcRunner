@@ -13,6 +13,7 @@ uniform vec3 iCameraPos;
 uniform vec3 iCameraRot;
 uniform float iOutline;
 uniform float iMaxDist;
+uniform float iShadows;
 
 struct Object {
     vec4 data1;
@@ -288,7 +289,7 @@ vec3 calcColor(vec3 p, vec3 ro, int i, float d) {
     vec3 col = map_result.col.rgb;
 
     // light
-    col *= light(p, !map_result.is_fractal);
+    col *= light(p, !map_result.is_fractal && iShadows > 0.5);
 
     // ambient occlusion
     col *= pow(1.0 - (float(i) / float(ITERATIONS) * 2.0), 2.0);

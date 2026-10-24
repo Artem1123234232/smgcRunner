@@ -71,3 +71,10 @@ public:
     bool pressed = false;
 };
 bool taskIs_SmgcKeyState(uint32_t taskIdx);
+
+class task_SmgcSetShadows: public BaseTask {
+public:
+    task_SmgcSetShadows(bool t_enabled);
+    bool enabled = true;
+};
+bool taskIs_SmgcSetShadows(uint32_t taskIdx);

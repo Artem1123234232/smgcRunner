@@ -37,7 +37,7 @@
 - Гибридный рендеринг в 3 прохода: depth-prepass по прокси-мешам, ray-marching только в ближайшей к камере прокси-поверхности, оранжевый каркас поверх. Каркас можно выключить задачей.
 - Прокси-меши строятся на CPU и гарантированно **охватывают** свои SDF, поэтому луч можно начинать прямо с их поверхности.
 - Отсечение по дальности: дальние объекты не попадают ни в геометрию, ни в SSBO, а у пограничных удаляются дальние треугольники.
-- Освещение: точечный источник, мягкие тени, ambient occlusion по числу шагов, туман и дизеринг.
+- Освещение: точечный источник, мягкие тени (отключаются задачей), ambient occlusion по числу шагов, туман и дизеринг.
 - Бесконечный пол в клетку, который всегда следует за камерой.
 - Камера и дальность прорисовки задаются задачами.
 - Подписка на клавиши: SMGC каждый тик сообщает подписчикам, нажаты ли их клавиши. Свободной камерой в примере управляет компонент `Scene`.
@@ -248,6 +248,7 @@ LOAD_DLL Base/Userlib.dll
 | `task_SmgcPushObject` | `2` | `std::unique_ptr<Object> obj` | Добавляет объект в буфер B: строит его прокси-меш и кладёт сам объект в список для SSBO |
 | `task_SmgcSwapObjects` | `0` | — | Меняет буферы A и B местами и загружает геометрию A в VBO/EBO |
 | `task_SmgcSetOutline` | `3` | `bool enabled` | Включает или выключает оранжевый каркас. По умолчанию включён |
+| `task_SmgcSetShadows` | `9` | `bool enabled` | Включает или выключает тени. По умолчанию включены |
 | `task_SmgcSetMaxDist` | `4` | `float maxDist` | Задаёт дальность прорисовки. Значение должно быть конечным и больше 0, иначе возвращается `-EINVAL` |
 | `task_SmgcSetCamera` | `5` | `Camera camera` | Задаёт позицию и углы камеры |
 | `task_SmgcSubscribeKey` | `6` | `int key` | Подписывает отправителя на клавишу |
@@ -350,7 +351,7 @@ sendTask(std::make_unique<task_SmgcSwapObjects>(), "SMGC");
 | `iMaxDist` | Дальность прорисовки, то есть `SMGC::maxDist` (по умолчанию 50) |
 | `EPSILON` | `iEpsilon`, то есть `SMGC::epsilon` = 0.0005 |
 | Свет | Точечный источник в (2, 4, 2), half-Lambert |
-| Тени | Мягкие, 40 шагов, `k = 16`, затемняют не больше чем в 2 раза |
+| Тени | Мягкие, 40 шагов, `k = 16`, затемняют не больше чем в 2 раза. Считаются, только если `iShadows = 1` |
 | Ambient occlusion | По числу шагов, которые понадобились лучу |
 | Туман | Квадратичный, к серому 0.28 на `iMaxDist` |
 | Пол | Плоскость y = −1, плитка 1×1 с тёмными швами |
@@ -366,6 +367,7 @@ Uniform-переменные, которые `SMGC` задаёт каждый к
 | `iMaxDist` | `float` | `SMGC::maxDist`: дальность луча и тумана |
 | `iEpsilon` | `float` | `SMGC::epsilon` |
 | `iOutline` | `float` | `1` — быстрый выход с оранжевым цветом (prepass и каркас), `0` — ray-marching |
+| `iShadows` | `float` | `1` — тени включены, `0` — выключены |
 
 Объекты передаются через SSBO `ObjectsBuffer` с `binding = 0`, массив `ObjectsData.items[]`.
 
@@ -410,6 +412,7 @@ Uniform-переменные, которые `SMGC` задаёт каждый к
 | `camera` | `Camera` | `{0,0,0}, {0,0,0}` | Камера, задаётся задачей `task_SmgcSetCamera` |
 | `keySubscriptions` | `std::vector<KeySubscription>` | пусто | Подписки на клавиши |
 | `outlineEnabled` | `bool` | `true` | Рисовать ли каркас |
+| `shadowsEnabled` | `bool` | `true` | Считать ли тени |
 | `maxDist` | `float` | `50.0` | Дальность прорисовки и отсечения, размер `AntiCube` и пола |
 | `epsilon` | `float` | `0.0005` | Точность ray-marching и толщина прокси пола |
 | `windowWidth`, `windowHeight` | `int` | `800` | Размер окна, обновляется при растягивании |
@@ -426,6 +429,7 @@ Uniform-переменные, которые `SMGC` задаёт каждый к
 | `void pushObject(std::unique_ptr<Object> obj)` | Отсекает объект по дальности, строит его прокси-меш в буфер B через `GenerateObject` и, если объект не отсечён целиком, добавляет его в `Objects_B`. `obj` не должен быть `nullptr`. |
 | `int draw()` | Очищает экран, загружает `Objects_A` в SSBO, задаёт uniform-переменные и рисует 3 прохода (см. [Гибридный рендеринг](#гибридный-рендеринг)). В конце отвязывает VAO. Возвращает `0` или `-ENODEV`, если буферы или шейдер не созданы. |
 | `void setOutline(bool enabled)` | Включает или выключает каркас. |
+| `void setShadows(bool enabled)` | Включает или выключает тени. |
 | `int setMaxDist(float newMaxDist)` | Задаёт дальность прорисовки. Возвращает `0` или `-EINVAL`, если значение не конечное или не больше 0. |
 | `void setCamera(const Camera& newCamera)` | Задаёт камеру. |
 | `int subscribeKey(int componentIdx, int key)` | Добавляет подписку, если её ещё нет. Возвращает `0` или `-EINVAL` для недопустимого кода клавиши. |
@@ -452,6 +456,7 @@ Uniform-переменные, которые `SMGC` задаёт каждый к
 | `task_SmgcSubscribeKey(int t_key)` | `6` | `int key` | `bool taskIs_SmgcSubscribeKey(uint32_t taskIdx)` |
 | `task_SmgcUnsubscribeKey(int t_key)` | `7` | `int key` | `bool taskIs_SmgcUnsubscribeKey(uint32_t taskIdx)` |
 | `task_SmgcKeyState(int t_key, bool t_pressed)` | `8` | `int key`, `bool pressed` | `bool taskIs_SmgcKeyState(uint32_t taskIdx)` |
+| `task_SmgcSetShadows(bool t_enabled)` | `9` | `bool enabled` | `bool taskIs_SmgcSetShadows(uint32_t taskIdx)` |
 
 ---
 

@@ -46,3 +46,8 @@ task_SmgcKeyState::task_SmgcKeyState(int t_key, bool t_pressed): BaseTask(8), ke
 bool taskIs_SmgcKeyState(uint32_t taskIdx) {
     return taskIdx == 8;
 }
+
+task_SmgcSetShadows::task_SmgcSetShadows(bool t_enabled): BaseTask(9), enabled(t_enabled) {}
+bool taskIs_SmgcSetShadows(uint32_t taskIdx) {
+    return taskIdx == 9;
+}

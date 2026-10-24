@@ -127,6 +127,9 @@ void SMGC::setCamera(glm::vec3 newPos, glm::vec3 newRot) {
 void SMGC::setOutline(bool enabled) {
     outlineEnabled = enabled;
 }
+void SMGC::setShadows(bool enabled) {
+    shadowsEnabled = enabled;
+}
 int SMGC::setMaxDist(float newMaxDist) {
     if (!std::isfinite(newMaxDist) || newMaxDist <= 0.0f) {
         std::cerr << getPrefix() << "Error in SMGC::setMaxDist: invalid maxDist " << std::to_string(newMaxDist) << std::endl;
@@ -179,6 +182,7 @@ int SMGC::draw() {
     shaderProgram->setVec3("iCameraRot", camera.rot);
     shaderProgram->setFloat("iMaxDist", maxDist);
     shaderProgram->setFloat("iEpsilon", epsilon);
+    shaderProgram->setFloat("iShadows", shadowsEnabled ? 1.0f : 0.0f);
     
     if (!vao) {std::cerr << getPrefix() << "Critical Error: vao is nullptr" << std::endl; return -ENODEV;}
     vao->Bind();
@@ -231,6 +235,9 @@ int SMGC::processTask(std::unique_ptr<BaseTask> task) {
     } else if (taskIs_SmgcSetOutline(taskIdx)) {
         auto* typed = static_cast<task_SmgcSetOutline*>(task.get());
         setOutline(typed->enabled);
+    } else if (taskIs_SmgcSetShadows(taskIdx)) {
+        auto* typed = static_cast<task_SmgcSetShadows*>(task.get());
+        setShadows(typed->enabled);
     } else if (taskIs_SmgcSetMaxDist(taskIdx)) {
         auto* typed = static_cast<task_SmgcSetMaxDist*>(task.get());
         return setMaxDist(typed->maxDist);
