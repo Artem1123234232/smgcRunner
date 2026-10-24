@@ -32,8 +32,9 @@ mat3 cameraRotation(vec3 deg) {
 
 void main() {
     mat3 R = cameraRotation(iCameraRot);
-    vec3 relPos  = mix(aPos - iCameraPos, aPos, aAttached);
-    vec3 viewPos = R * relPos;
+    vec3 worldRel = aPos - iCameraPos;
+    vec3 relPos  = mix(worldRel, transpose(R) * aPos, aAttached);
+    vec3 viewPos = mix(R * worldRel, aPos, aAttached);
 
     fragPos = relPos;
     fragObjectIdx = aObjectIdx;
