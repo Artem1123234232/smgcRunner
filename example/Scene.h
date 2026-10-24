@@ -7,7 +7,7 @@
 #include <smpb/BaseTask.h>
 
 // SMGC
-#include "../SMGC/SMGC.h"
+#include <smgc/display3D.h>
 
 class Scene: public BaseComponent
 {

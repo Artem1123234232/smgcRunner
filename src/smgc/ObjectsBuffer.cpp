@@ -1,4 +1,4 @@
-#include "ObjectsBuffer.h"
+#include <smgc/ObjectsBuffer.h>
 
 ObjectsBuffer::ObjectsBuffer() {
     glGenBuffers(1, &ID);

@@ -1,4 +1,4 @@
-#include "SMGC.h"
+#include <smgc/display3D.h>
 
 // Core class
 #include <smpb/Core.h>

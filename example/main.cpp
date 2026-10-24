@@ -14,10 +14,10 @@
 #include <smpb/Core.h>
 
 // SMGC
-#include "SMGC/SMGC.h"
+#include <smgc/display3D.h>
 
 // Scene
-#include "Scene/Scene.h"
+#include "Scene.h"
 
 int main(int argc, char *argv[]) {
     Core core = Core();

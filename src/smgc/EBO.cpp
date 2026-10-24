@@ -1,4 +1,4 @@
-#include "EBO.h"
+#include <smgc/EBO.h>
 
 EBO::EBO() {
     glGenBuffers(1, &ID);

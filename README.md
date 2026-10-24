@@ -1,0 +1,603 @@
+# SMGC
+
+**SMGC** — компонент 3D-графики на OpenGL для ядра [SMPB](https://github.com/s1m-ila/SMPB). Он открывает окно, принимает от других компонентов сцену в виде списка SDF-объектов (шары, кубы, капсулы, фракталы) и рисует её **гибридным** способом: полигональные прокси-меши отсекают пустое пространство, а на их поверхности запускается ray-marching, который и даёт итоговую картинку.
+
+## Содержание
+
+- [Возможности](#возможности)
+- [Сборка](#сборка)
+- [Подключение к другому проекту](#подключение-к-другому-проекту)
+- [Запуск](#запуск)
+- [Управление камерой](#управление-камерой)
+- [Файл конфигурации `core.config`](#файл-конфигурации-coreconfig)
+- [Архитектура](#архитектура)
+  - [Протокол задач](#протокол-задач)
+  - [Формат объекта `Object`](#формат-объекта-object)
+  - [Гибридный рендеринг](#гибридный-рендеринг)
+  - [Шейдеры](#шейдеры)
+- [Справочник по классам](#справочник-по-классам)
+  - [SMGC](#smgc-1)
+  - [Задачи taskDefinitions.h](#задачи-taskdefinitionsh)
+  - [Shader](#shader)
+  - [VAO](#vao)
+  - [VBO, EBO и ObjectsBuffer](#vbo-ebo-и-objectsbuffer)
+  - [Функции ObjectsGenerator.h](#функции-objectsgeneratorh)
+  - [Функции paletts.h](#функции-palettsh)
+- [Соглашения](#соглашения)
+- [Пример: свой компонент-сцена](#пример-свой-компонент-сцена)
+- [Структура проекта](#структура-проекта)
+- [Лицензия](#лицензия)
+
+## Возможности
+
+- Готовый компонент `SMGC` для ядра SMPB: окно GLFW, контекст OpenGL 4.4 core, загрузка функций через glad.
+- Сцена передаётся задачами SMPB: очистить, добавить объект, показать. Объекты хранятся с **двойной буферизацией**, поэтому сцену можно собирать по частям, пока на экране остаётся предыдущая.
+- Примитивы: шар, куб, капсула. Фракталы: Mandelbulb и губка Менгера.
+- Гибридный рендеринг в 3 прохода: depth-prepass по прокси-мешам, ray-marching только в ближайшей к камере прокси-поверхности, оранжевый каркас поверх.
+- Прокси-меши строятся на CPU и гарантированно **охватывают** свои SDF, поэтому луч можно начинать прямо с их поверхности.
+- Отсечение по дальности: дальние объекты не попадают ни в геометрию, ни в SSBO, а у пограничных удаляются дальние треугольники.
+- Освещение: точечный источник, мягкие тени, ambient occlusion по числу шагов, туман и дизеринг.
+- Бесконечный пол в клетку, который всегда следует за камерой.
+- Свободная камера с управлением с клавиатуры.
+- Косинусные палитры `PaletteCosinka` / `PaletteCosinka2` для красивых цветов.
+- Собирается как статическая библиотека `smgc::display3D` и подключается к другим CMake-проектам через `add_subdirectory` или `FetchContent`.
+
+## Сборка
+
+### Требования
+
+- CMake 3.21 или новее
+- Компилятор с поддержкой C++23 (проверено на GCC)
+- Ninja или Make
+- GLFW 3, GLM и OpenGL (GLVND), установленные в системе: они ищутся через `find_package`
+- Видеокарта и драйвер с поддержкой GLSL 4.60: шейдеры начинаются с `#version 460 core`
+
+glad лежит в `third_party/glad` и собирается вместе с проектом. smpb скачивается автоматически (см. ниже).
+
+Все зависимости описаны в `shell.nix`, поэтому на NixOS или с установленным Nix достаточно зайти в окружение:
+
+```bash
+nix-shell
+```
+
+### Обычная сборка
+
+```bash
+cmake -S . -B build -G Ninja
+cmake --build build
+```
+
+Собираются цели:
+
+| Цель | Тип | Результат | Описание |
+|------|-----|-----------|----------|
+| `smgc_display3D` (псевдоним `smgc::display3D`) | статическая библиотека | `libsmgc_display3D.a` | Компонент `SMGC`, обёртки OpenGL, генератор геометрии, палитры и задачи. Публичные заголовки лежат в `include/smgc/` и подключаются как `<smgc/display3D.h>`. smpb, glad, GLFW и GLM подключены как `PUBLIC`-зависимости, поэтому их заголовки и требование C++23 передаются всем, кто линкуется с библиотекой. |
+| `glad` | статическая библиотека | `libglad.a` | Загрузчик функций OpenGL из `third_party/glad`. Создаётся, только если цели `glad` ещё нет. |
+| `smpb_core` (псевдоним `smpb::core`) | статическая библиотека | `libsmpb_core.a` | Ядро SMPB. Скачивается через `FetchContent` из [github.com/s1m-ila/SMPB](https://github.com/s1m-ila/SMPB), только если цели `smpb::core` ещё нет. |
+| `smgc` | программа | `smgc`, `files/default.vert`, `files/default.frag`, `files/core.config` | Пример из `example/`, слинкованный с `smgc::display3D`. Собирается, только если включена опция `SMGC_BUILD_EXAMPLE`. После сборки шейдеры и `core.config` копируются из `files/` репозитория в папку `files/` рядом с программой. |
+
+Если `CMAKE_BUILD_TYPE` не задан, по умолчанию используется `Release`. В `Release` включается межмодульная оптимизация (LTO), если компилятор её поддерживает. Тип сборки и LTO настраиваются только тогда, когда smgc собирается как самостоятельный проект. Внутри другого проекта эти настройки берутся из него.
+
+| Опция | По умолчанию | Описание |
+|-------|--------------|----------|
+| `SMGC_BUILD_EXAMPLE` | `ON`, если smgc собирается сам; `OFF` внутри другого проекта | Собирать ли программу `smgc` |
+
+Сборка только библиотеки:
+
+```bash
+cmake -S . -B build -G Ninja -DSMGC_BUILD_EXAMPLE=OFF
+cmake --build build
+```
+
+Отладочная сборка:
+
+```bash
+cmake -S . -B build-debug -G Ninja -DCMAKE_BUILD_TYPE=Debug
+cmake --build build-debug
+```
+
+Для сборки через Make флаг `-G Ninja` не указывается, а в папке сборки запускается `make`.
+
+Установка программы `smgc` в `bin/` выбранного префикса:
+
+```bash
+cmake --install build --prefix /путь/установки
+```
+
+Устанавливается только программа: библиотека, заголовки, шейдеры и `core.config` не устанавливаются.
+
+В папке сборки генерируется `compile_commands.json` для clangd.
+
+## Подключение к другому проекту
+
+smgc подключается как CMake-подпроект. В этом случае собирается только библиотека `smgc::display3D`: программа `smgc` не собирается, а тип сборки и LTO не меняются. GLFW, GLM и OpenGL по-прежнему должны быть установлены в системе.
+
+### Через `add_subdirectory`
+
+Если исходники smgc лежат рядом с проектом или внутри него:
+
+```cmake
+cmake_minimum_required(VERSION 3.21)
+project(myapp LANGUAGES C CXX)
+
+add_subdirectory(../smgc smgc)
+
+add_executable(myapp main.cpp)
+target_link_libraries(myapp PRIVATE smgc::display3D)
+smgc_copy_files(myapp)
+```
+
+Второй аргумент `add_subdirectory` (папка сборки) обязателен, если путь к smgc лежит вне папки проекта.
+
+### Через `FetchContent`
+
+smgc скачивается из репозитория при конфигурации проекта:
+
+```cmake
+cmake_minimum_required(VERSION 3.21)
+project(myapp LANGUAGES C CXX)
+
+include(FetchContent)
+FetchContent_Declare(smgc
+  GIT_REPOSITORY https://github.com/s1m-ila/SMGC.git
+  GIT_TAG        main
+)
+FetchContent_MakeAvailable(smgc)
+
+add_executable(myapp main.cpp)
+target_link_libraries(myapp PRIVATE smgc::display3D)
+smgc_copy_files(myapp)
+```
+
+### Функция `smgc_copy_files`
+
+`smgc_copy_files(<цель>)` добавляет к цели шаг `POST_BUILD`, который копирует `default.vert` и `default.frag` из `files/` репозитория smgc в папку `files/` рядом с собранной программой. Без шейдеров компонент `SMGC` не запустится. `core.config` эта функция не копирует: о нём заботится сам проект.
+
+### Своя версия smpb или glad
+
+smgc скачивает smpb, только если цели `smpb::core` ещё нет, и собирает свой glad, только если нет цели `glad`. Чтобы использовать свою копию, её нужно подключить **до** smgc:
+
+```cmake
+add_subdirectory(../smpb smpb)
+add_subdirectory(../smgc smgc)
+```
+
+В обоих случаях заголовки подключаются с префиксом `smgc/`. Главный заголовок `display3D.h` подтягивает все остальные:
+
+```cpp
+#include <smgc/display3D.h>
+```
+
+## Запуск
+
+```bash
+cd build
+./smgc
+```
+
+Шейдеры читаются из `files/default.vert` и `files/default.frag`, а конфигурация smpb — из `files/core.config`. Все пути отсчитываются от **текущей рабочей папки**, поэтому программа запускается из папки сборки. Файлы копируются туда командой `copy_if_different` при сборке программы `smgc`. Если изменился только шейдер в `files/` репозитория, копия в папке сборки остаётся старой до следующей пересборки `smgc`, а сам шейдер подхватывается только после перезапуска.
+
+Открывается окно `SMGC` размером 800×800, его можно растягивать. При старте в лог выводятся версия OpenGL и полный текст обоих шейдеров. Программа работает, пока окно не закроют: тогда `SMGC` вызывает `Core_stop()`. Остановить её можно и через `Ctrl+C` или `SIGTERM`, это обрабатывает ядро smpb.
+
+Кадр рисуется один раз за тик ядра, поэтому частота кадров совпадает с TPS из `core.config`.
+
+## Управление камерой
+
+| Клавиша | Действие |
+|---------|----------|
+| `←` / `→` | Поворот влево / вправо (yaw) |
+| `↑` / `↓` | Наклон вверх / вниз (pitch), ограничен диапазоном ±89° |
+| `W` / `S` | Движение вперёд / назад по направлению взгляда, с учётом наклона |
+| `A` / `D` | Движение влево / вправо в горизонтальной плоскости |
+| `Q` / `E` | Уменьшить / увеличить скорость движения и поворота в 2 раза. Срабатывает не чаще одного раза за 10 тиков |
+| `C` | Округлить углы до 45°, а позицию до центра ближайшей клетки (`floor(x) + 0.5`) |
+| `R` | Сбросить позицию, углы и скорости |
+
+Скорость по умолчанию: 3 единицы в секунду и 90° в секунду. Шаг считается как `скорость / TPS`, поэтому скорость камеры не зависит от TPS. Камера стартует в начале координат и смотрит вдоль оси +Z, пол находится на высоте y = −1.
+
+В режиме отладки ядра на каждом тике в лог выводятся `camera.pos` и `camera.rot`.
+
+## Файл конфигурации `core.config`
+
+Файл читает компонент `Config` из smpb, формат и список команд описаны в [README smpb](https://github.com/s1m-ila/SMPB#файл-конфигурации-coreconfig). Сам smgc из конфигурации ничего не читает, но от `SET_TPS` зависит частота кадров и скорость анимации в примере.
+
+`files/core.config` в репозитории:
+
+```
+SET_TPS 30
+SET_TPS BABAX
+SET_DEBUGMODEENABLED TRUE
+LOAD_DLL Base/Userlib.dll
+```
+
+Вторая строка с некорректным значением оставлена как пример: `Config` выведет для неё `no valid value!`. Режим отладки в примере включается в `example/main.cpp` вызовом `core.setDebugModeEnabled(true)`.
+
+## Архитектура
+
+```
+                 ┌──────────────────────────────┐
+                 │          Core (smpb)         │
+                 │   цикл тиков, TPS, задачи    │
+                 └──┬───────────┬───────────┬───┘
+       init/tick/death          │           │
+                    ▼           ▼           ▼
+            ┌──────────┐  ┌──────────┐  ┌──────────┐
+            │  Config  │  │   SMGC   │  │  Scene   │
+            │          │  │  окно,   │  │ (пример) │
+            │          │  │ рендер   │  │          │
+            └──────────┘  └────▲─────┘  └────┬─────┘
+                               │             │
+                               └─────────────┘
+                     Clear → Push × N → Swap  (задачи BaseTask)
+```
+
+`example/main.cpp` добавляет в ядро три компонента по порядку: `Config`, `SMGC` и `Scene`. На каждом тике `SMGC` обрабатывает клавиатуру и рисует кадр, а затем `Scene` отправляет ему новую сцену. Поэтому кадр, нарисованный на тике N, показывает сцену, отправленную на тике N − 1.
+
+### Протокол задач
+
+Компоненты не вызывают методы `SMGC` напрямую, а отправляют ему задачи по имени `"SMGC"`:
+
+| Задача | `taskIdx` | Данные | Что делает |
+|--------|-----------|--------|------------|
+| `task_SmgcClearObjects` | `1` | — | Очищает буфер B и кладёт в него служебную геометрию: `AntiCube` вокруг камеры и прокси пола |
+| `task_SmgcPushObject` | `2` | `std::unique_ptr<Object> obj` | Добавляет объект в буфер B: строит его прокси-меш и кладёт сам объект в список для SSBO |
+| `task_SmgcSwapObjects` | `0` | — | Меняет буферы A и B местами и загружает геометрию A в VBO/EBO |
+
+Типичный кадр сцены:
+
+```cpp
+sendTask(std::make_unique<task_SmgcClearObjects>(), "SMGC");
+sendTask(std::make_unique<task_SmgcPushObject>(std::make_unique<Object>(...)), "SMGC");
+// ... остальные объекты
+sendTask(std::make_unique<task_SmgcSwapObjects>(), "SMGC");
+```
+
+Буфер A всегда показывается на экране, а буфер B собирается. Пока не пришёл `Swap`, на экране остаётся предыдущая сцена, поэтому сцену можно обновлять реже, чем раз в тик. Задачи с неизвестным `taskIdx` молча игнорируются.
+
+### Формат объекта `Object`
+
+`Object` — 4 × `glm::vec4`, 64 байта, раскладка std430. Та же структура объявлена в `default.frag`, и они должны совпадать. Краткое описание полей лежит в `files/разметка.txt`.
+
+| Поле | `.x` | `.y` | `.z` | `.w` |
+|------|------|------|------|------|
+| `data1` | тип объекта | позиция x | позиция y | позиция z |
+| `data2` | радиус / половина ребра | — | — | длина (капсула) |
+| `data3` | R | G | B | A |
+| `data4` | поворот вокруг X | поворот вокруг Y | поворот вокруг Z | — |
+
+- Тип хранится как `float` и округляется до целого.
+- Поворот задаётся в **радианах** и применяется как `Rx · Ry · Rz` в шейдере и в генераторе геометрии одинаково.
+- Цвет берётся из `data3.rgb`, альфа-канал пока не используется.
+
+| Тип | Объект | Параметры | Прокси-меш |
+|-----|--------|-----------|------------|
+| `1` | Шар | `data2.x` — радиус | UV-сфера, раздутая так, что грани касаются шара |
+| `2` | Куб | `data2.x` — половина ребра | Куб того же размера |
+| `3` | Капсула | `data2.x` — радиус, `data2.w` — длина | Раздутая UV-капсула |
+| `-1` | Mandelbulb (степень 8) | `data2.x` — радиус | Сфера радиусом 1.05 · r — граница фрактала |
+| `-2` | Губка Менгера (5 итераций) | `data2.x` — половина ребра | Куб того же размера |
+
+Капсула вытянута вдоль локальной оси Y: это отрезок длиной `length` с центром в точке y = `length − radius`, скруглённый радиусом `radius`.
+
+Отрицательный тип означает фрактальную версию фигуры. В тенях фракталы заменяются своими простыми фигурами, а сами фракталы тени на себе не получают. У капсулы фрактальной версии нет, поэтому тип `-3` на экране не виден: для него строится прокси-меш, но шейдер его не рисует и учитывает только в тенях как обычную капсулу. Объекты других типов не получают прокси-меша и тоже не рисуются.
+
+### Гибридный рендеринг
+
+Полный ray-marching на весь экран дорогой: каждый пиксель идёт от камеры до объекта по шагам. SMGC сокращает путь луча с помощью полигональных прокси-мешей, которые охватывают свои SDF-объекты.
+
+`draw()` рисует один и тот же набор треугольников в 3 прохода:
+
+1. **Depth-prepass.** Запись цвета выключена, `iOutline = 1`, поэтому фрагментный шейдер сразу выходит. В буфере глубины остаётся ближайшая прокси-поверхность.
+2. **Ray-marching.** `glDepthFunc(GL_EQUAL)`, запись глубины выключена. В `default.frag` стоит `layout(early_fragment_tests)`, поэтому дорогой шейдер выполняется ровно один раз на пиксель — только для ближайшей прокси-поверхности. Луч стартует прямо с неё: `rd = normalize(fragPos)`, `t0 = length(fragPos)`.
+3. **Каркас.** `glDepthFunc(GL_LESS)`, режим `GL_LINE`, `iOutline = 1`: поверх рисуются оранжевые рёбра прокси-мешей.
+
+Чтобы глубина в разных проходах совпадала бит в бит, `gl_Position` в вертексном шейдере объявлен `invariant`.
+
+Старт луча с прокси-поверхности корректен, только если прокси **целиком охватывает** свой SDF: иначе луч начнётся внутри объекта или проскочит его. Поэтому:
+
+- сферы и капсулы строятся функцией `RoundMesh`, которая раздувает меш на вычисленный коэффициент: грани касаются настоящей поверхности, а не режут её;
+- для Mandelbulb берётся сфера радиусом 1.05 · r, внутри которой лежит фрактал;
+- пол — это тонкий бокс на высоте y = −1 толщиной 2 · `epsilon`, который охватывает шейдерный слой `|y + 1| ≤ 0.5 · EPSILON`. `SMGC::epsilon` — единственный источник этого значения: он передаётся в шейдер как `iEpsilon`, а там `#define EPSILON iEpsilon`;
+- вокруг камеры стоит `AntiCube` — куб с половиной ребра `maxDist`, привязанный к камере и видимый изнутри. Пиксели, где ближайшей оказалась его поверхность, начинают луч дальше `MAX_DISTANCE` и сразу получают цвет тумана.
+
+**Отсечение по дальности.** `pushObject` считает радиус описанной сферы объекта (`ObjectBoundingRadius`) и расстояние от её центра до камеры:
+
+- если сфера целиком дальше `maxDist`, объект не попадает ни в геометрию, ни в SSBO;
+- если сфера пересекает границу, `CullFarTriangles` удаляет треугольники, у которых все 3 вершины дальше `maxDist`, и вершины, оставшиеся без треугольников;
+- объекты неизвестных типов не отсекаются никогда, `AntiCube` тоже.
+
+**Порядок обхода вершин.** Проекция левосторонняя, поэтому у видимого треугольника `cross(b - a, c - a)` по правилу правой руки смотрит **внутрь** фигуры. Включено отсечение задних граней (`GL_BACK`, `GL_CCW`).
+
+### Шейдеры
+
+`files/default.vert` строит проекцию вручную, без матрицы MVP:
+
+- позиция вершины переводится в систему камеры: `mix(aPos - iCameraPos, aPos, aAttached)`. Вершины с `attached = 1` привязаны к камере и двигаются вместе с ней;
+- поворот камеры собирается из углов `iCameraRot` в градусах как `Rz · Rx · Ry`;
+- `w = z` в системе камеры, ближняя и дальняя плоскости — 0.01 и 1000;
+- поле зрения по меньшей стороне окна — около 53°, при растягивании окна картинка не искажается.
+
+`files/default.frag` — ray-marcher, который стартует с прокси-поверхности:
+
+| Параметр | Значение |
+|----------|----------|
+| `ITERATIONS` | 1000 шагов луча |
+| `MAX_DISTANCE` | 50.0, должно совпадать с `SMGC::maxDist` |
+| `EPSILON` | `iEpsilon`, то есть `SMGC::epsilon` = 0.0005 |
+| Свет | Точечный источник в (2, 4, 2), half-Lambert |
+| Тени | Мягкие, 40 шагов, `k = 16`, затемняют не больше чем в 2 раза |
+| Ambient occlusion | По числу шагов, которые понадобились лучу |
+| Туман | Квадратичный, к серому 0.28 на `MAX_DISTANCE` |
+| Пол | Плоскость y = −1, плитка 1×1 с тёмными швами |
+
+Uniform-переменные, которые `SMGC` задаёт каждый кадр:
+
+| Uniform | Тип | Значение |
+|---------|-----|----------|
+| `iTime` | `float` | Время в секундах: `tickCounter / TPS` |
+| `iResolution` | `vec2` | Размер окна в пикселях |
+| `iCameraPos` | `vec3` | Позиция камеры |
+| `iCameraRot` | `vec3` | Углы камеры в градусах: pitch, yaw, roll |
+| `iMaxDist` | `float` | `SMGC::maxDist`. В текущих шейдерах не объявлен и пропускается |
+| `iEpsilon` | `float` | `SMGC::epsilon` |
+| `iOutline` | `float` | `1` — быстрый выход с оранжевым цветом (prepass и каркас), `0` — ray-marching |
+
+Объекты передаются через SSBO `ObjectsBuffer` с `binding = 0`, массив `ObjectsData.items[]`.
+
+`files/default copy.frag` — старый полноэкранный ray-marcher, он оставлен для сравнения и не загружается. Если меняется SDF в шейдере, нужно поменять и его прокси в `ObjectsGenerator` (`GenerateObject` и `ObjectBoundingRadius`).
+
+## Справочник по классам
+
+### SMGC
+
+`include/smgc/display3D.h`, `src/smgc/display3D.cpp` — наследник `BaseComponent`, имя компонента `"SMGC"`.
+
+Компонент рендера: окно, контекст OpenGL, камера, буферы сцены и отрисовка.
+
+#### Структура Camera
+
+| Поле | Тип | Описание |
+|------|-----|----------|
+| `pos` | `glm::vec3` | Позиция камеры |
+| `rot` | `glm::vec3` | Углы в градусах: `x` — pitch, `y` — yaw, `z` — roll |
+
+#### Поля (private)
+
+| Поле | Тип | По умолчанию | Описание |
+|------|-----|--------------|----------|
+| `window` | `GLFWwindow*` | `nullptr` | Окно GLFW |
+| `localTickCounter` | `long long` | `0` | Номер текущего тика ядра |
+| `shaderProgram` | `std::unique_ptr<Shader>` | `nullptr` | Программа из `default.vert` и `default.frag` |
+| `vao`, `vbo`, `ebo` | `std::unique_ptr<VAO/VBO/EBO>` | `nullptr` | Буферы геометрии прокси-мешей |
+| `objectsBuffer` | `std::unique_ptr<ObjectsBuffer>` | `nullptr` | SSBO с объектами, `binding = 0` |
+| `Objects_A`, `Objects_B` | `std::vector<Object>` | пусто | Объекты: A — на экране, B — собираемый |
+| `Vertices_A`, `Vertices_B` | `std::vector<Vertex>` | пусто | Вершины прокси-мешей |
+| `Indices_A`, `Indices_B` | `std::vector<GLuint>` | пусто | Индексы прокси-мешей |
+| `camera` | `Camera` | `{0,0,0}, {0,0,0}` | Камера |
+| `standartMoveSpeed` | `float` | `3.0` | Скорость движения по умолчанию, единиц в секунду |
+| `standartRotSpeed` | `float` | `90.0` | Скорость поворота по умолчанию, градусов в секунду |
+| `moveSpeed`, `rotSpeed` | `float` | как выше | Текущие скорости, меняются клавишами `Q` / `E` |
+| `maxDist` | `float` | `50.0` | Дальность отсечения и размер `AntiCube` и пола |
+| `epsilon` | `float` | `0.0005` | Точность ray-marching и толщина прокси пола |
+| `windowWidth`, `windowHeight` | `int` | `800` | Размер окна, обновляется при растягивании |
+
+#### Методы
+
+| Метод | Описание |
+|-------|----------|
+| `SMGC()` | Конструктор. Задаёт имя `"SMGC"`. |
+| `int init() override` | Инициализирует GLFW, создаёт окно с контекстом OpenGL 4.4 core и колбэком на изменение размера, загружает glad, включает тест глубины и отсечение задних граней, компилирует шейдеры, создаёт VAO, VBO, EBO и SSBO и связывает атрибуты: 0 — `pos`, 1 — `attached`. В конце собирает и показывает пустую сцену. Возвращает `0`, `-ENODEV`, если не удалось создать окно или загрузить glad, или код ошибки шейдера. |
+| `void windowResize()` | Вызывается при изменении размера окна. Пока пустой. |
+| `void swapObjects()` | Меняет местами буферы A и B и загружает вершины и индексы A в VBO и EBO. Перед загрузкой отвязывает VAO. |
+| `void clearObjects()` | Очищает буфер B и добавляет в него `AntiCube` вокруг камеры и прокси пола `Plane`. |
+| `void pushObject(std::unique_ptr<Object> obj)` | Отсекает объект по дальности, строит его прокси-меш в буфер B через `GenerateObject` и, если объект не отсечён целиком, добавляет его в `Objects_B`. `obj` не должен быть `nullptr`. |
+| `int draw()` | Очищает экран, загружает `Objects_A` в SSBO, задаёт uniform-переменные и рисует 3 прохода (см. [Гибридный рендеринг](#гибридный-рендеринг)). В конце отвязывает VAO. Возвращает `0` или `-ENODEV`, если буферы или шейдер не созданы. |
+| `int keyboard()` | Читает клавиатуру и двигает камеру (см. [Управление камерой](#управление-камерой)). Возвращает `0`. |
+| `int processTask(std::unique_ptr<BaseTask> task) override` | Выбирает обработчик по `taskIdx`: `swapObjects()`, `clearObjects()` или `pushObject()`. Всегда возвращает `0`. |
+| `int tick(long long tickCounter) override` | Если окно закрыто, вызывает `Core_stop()`. Иначе обрабатывает клавиатуру, в режиме отладки выводит камеру, рисует кадр, меняет буферы окна и обрабатывает события. Возвращает `0` или код ошибки `draw()`. |
+| `void death() override` | Удаляет буферы и шейдер, закрывает окно, завершает GLFW и вызывает `Core_stop()`: без окна программа дальше не работает. |
+
+---
+
+### Задачи taskDefinitions.h
+
+`include/smgc/taskDefinitions.h`, `src/smgc/taskDefinitions.cpp`. Все задачи — наследники `BaseTask` из smpb.
+
+| Класс | `taskIdx` | Поля | Проверка |
+|-------|-----------|------|----------|
+| `task_SmgcSwapObjects()` | `0` | — | `bool taskIs_SmgcSwapObjects(uint32_t taskIdx)` |
+| `task_SmgcClearObjects()` | `1` | — | `bool taskIs_SmgcClearObjects(uint32_t taskIdx)` |
+| `task_SmgcPushObject(std::unique_ptr<Object> t_obj)` | `2` | `std::unique_ptr<Object> obj` | `bool taskIs_SmgcPushObject(uint32_t taskIdx)` |
+
+---
+
+### Shader
+
+`include/smgc/shaderClass.h`, `src/smgc/shaderClass.cpp`
+
+Программа из вертексного и фрагментного шейдеров.
+
+| Метод | Описание |
+|-------|----------|
+| `Shader(const char* vertexFile, const char* fragmentFile)` | Читает оба файла через `readFile_S` из smpb, выводит их текст в лог, компилирует и линкует программу. Ошибки компиляции и линковки выводятся в `cerr`. |
+| `int getStatus()` | `0`, если программа собрана; код ошибки `readFile_S`, если файл не прочитан; `-EINVAL`, если шейдер не скомпилировался или программа не слинковалась. |
+| `void Activate()` | `glUseProgram`. |
+| `void Delete()` | Удаляет программу. |
+| `void setFloat(const char* name, float v)` | Задаёт uniform `float`. |
+| `void setVec2(const char* name, float x, float y)`, `setVec2(const char* name, glm::vec2 v)` | Задаёт uniform `vec2`. |
+| `void setVec3(const char* name, float x, float y, float z)`, `setVec3(const char* name, glm::vec3 v)` | Задаёт uniform `vec3`. |
+
+Все `set*` молча ничего не делают, если uniform не найден, и сами активируют программу, если активна другая.
+
+---
+
+### VAO
+
+`include/smgc/VAO.h`, `src/smgc/VAO.cpp`
+
+| Метод | Описание |
+|-------|----------|
+| `VAO()` | Создаёт VAO. |
+| `void LinkVBO(VBO& VBO, GLuint layout, GLuint layoutAttached)` | Связывает атрибуты `Vertex::pos` (`vec3`) и `Vertex::attached` (`float`) с указанными location. |
+| `void Bind()`, `void Unbind()`, `void Delete()` | Привязать, отвязать, удалить. |
+
+---
+
+### VBO, EBO и ObjectsBuffer
+
+`include/smgc/VBO.h`, `include/smgc/EBO.h`, `include/smgc/ObjectsBuffer.h` и одноимённые `.cpp` в `src/smgc/`.
+
+Три обёртки над буферами OpenGL с одинаковым поведением `Upload`: если размер данных не изменился, буфер перезаписывается через `glBufferSubData`, иначе пересоздаётся через `glBufferData` с `GL_DYNAMIC_DRAW`. Текущий размер хранится в `capacityBytes`.
+
+| Класс | Буфер | Данные | Методы |
+|-------|-------|--------|--------|
+| `VBO` | `GL_ARRAY_BUFFER` | `std::vector<Vertex>` | `Upload`, `Bind`, `Unbind`, `Delete` |
+| `EBO` | `GL_ELEMENT_ARRAY_BUFFER` | `std::vector<GLuint>` | `Upload`, `Bind`, `Unbind`, `Delete` |
+| `ObjectsBuffer` | `GL_SHADER_STORAGE_BUFFER` | `std::vector<Object>` | `Upload`, `Bind(int bind)` — привязка к точке `binding`, `Delete` |
+
+`Upload` у EBO привязывает буфер к `GL_ELEMENT_ARRAY_BUFFER` и отвязывает его в конце. Если в этот момент привязан VAO, EBO отвяжется и от него, поэтому EBO загружается только без привязанного VAO.
+
+Структура вершины:
+
+| Поле | Тип | Описание |
+|------|-----|----------|
+| `pos` | `glm::vec3` | Позиция |
+| `attached` | `float` | `0` — вершина в мировых координатах, `1` — привязана к камере |
+
+---
+
+### Функции ObjectsGenerator.h
+
+`include/smgc/ObjectsGenerator.h`, `src/smgc/ObjectsGenerator.cpp`. Генераторы добавляют вершины и индексы в конец переданных векторов. Параметр `attached` записывается во все вершины меша.
+
+| Функция | Описание |
+|---------|----------|
+| `bool GenerateObject(vertices, indices, const Object& obj, float attached = 0)` | Строит прокси-меш объекта по `abs(type)`: `Sphere`, `Cube` или `Capsule`. Для типа `-1` берёт сферу радиусом 1.05 · r. Возвращает `false` для неизвестных типов. |
+| `float ObjectBoundingRadius(const Object& obj)` | Радиус описанной сферы объекта относительно `data1.yzw`. Возвращает `-1` для неизвестных типов. |
+| `void CullFarTriangles(vertices, indices, size_t vertexStart, size_t indexStart, const glm::vec3& center, float maxDist)` | Удаляет из диапазона, начиная с `vertexStart` / `indexStart`, треугольники, у которых все 3 вершины дальше `maxDist` от `center`, и неиспользуемые вершины. |
+| `void Sphere(vertices, indices, const Object& obj, float attached = 0)` | UV-сфера 16 × 32, раздутая до охвата шара. |
+| `void Cube(vertices, indices, const Object& obj, float attached = 0)` | Куб с половиной ребра `data2.x`. |
+| `void Capsule(vertices, indices, const Object& obj, float attached = 0)` | UV-капсула, раздутая до охвата капсулы. |
+| `void Plane(vertices, indices, const glm::vec3& center, float halfSize, float height, float halfThickness, float attached = 0)` | Плоский бокс `halfSize × halfThickness × halfSize` с центром в (`center.x`, `height`, `center.z`). Используется как прокси пола. |
+| `void AntiCube(vertices, indices, float radius, float attached = 0)` | Куб, видимый изнутри. Используется как фон вокруг камеры. |
+| `void Quad(vertices, indices, float attached = 0)` | Квадрат от (−1, −1) до (1, 1) в плоскости z = 0. Сейчас не используется. |
+
+Все меши объектов поворачиваются по `data4` и сдвигаются в `data1.yzw`.
+
+---
+
+### Функции paletts.h
+
+`include/smgc/paletts.h`, `src/smgc/paletts.cpp`
+
+| Функция | Описание |
+|---------|----------|
+| `glm::vec3 PaletteCosinka(float t)` | Косинусная палитра: `t` ограничивается отрезком [0, 1], результат — цвет RGB в [0, 1]. Основная волна, вторая волна для «характера» и яркий горб в середине. |
+| `glm::vec3 PaletteCosinka2(float t)` | То же со сдвинутыми фазами, другой набор цветов. |
+
+## Соглашения
+
+- **Коды возврата.** Как в smpb: `0` — успех, ошибки — отрицательный `errno`: `-ENODEV` (не удалось создать окно, загрузить OpenGL или нет буфера), `-EINVAL` (ошибка шейдера).
+- **Логи.** Информационные сообщения пишутся в `std::clog`, ошибки в `std::cerr`, сообщения компонента начинаются с `getPrefix()`. Комментарии и логи пишутся на русском или английском, в зависимости от окружающего кода.
+- **Заголовки** подключаются с префиксом: `<smgc/X.h>`, `<smpb/X.h>`.
+- **Новые файлы** `.cpp` и `.h` добавляются в список исходников `CMakeLists.txt` вручную, поиска по маске нет.
+- **Новая задача** получает уникальный `taskIdx`, функцию `taskIs_*` и ветку в `SMGC::processTask`.
+- **Новый тип объекта** добавляется в 3 места: SDF в `default.frag` (`map`), прокси-меш в `GenerateObject` и радиус в `ObjectBoundingRadius`. Прокси обязан охватывать SDF.
+- **`Object`** в C++ и в GLSL должен совпадать, размер проверяется `static_assert`.
+- **`MAX_DISTANCE`** в шейдере и `SMGC::maxDist` должны совпадать.
+
+## Пример: свой компонент-сцена
+
+```cpp
+#include <smpb/Core.h>
+#include <smpb/Config.h>
+#include <smgc/display3D.h>
+
+#include <cmath>
+
+class Orbit : public BaseComponent {
+public:
+    Orbit() : BaseComponent("Orbit") {}
+
+    int tick(long long tickCounter) override {
+        float time = float(tickCounter) / float(Core_getTPS());
+        glm::vec3 col = PaletteCosinka(std::fmod(time * 0.1f, 1.0f));
+
+        sendTask(std::make_unique<task_SmgcClearObjects>(), "SMGC");
+
+        // Губка Менгера, вращается вокруг оси Y
+        sendTask(std::make_unique<task_SmgcPushObject>(std::make_unique<Object>(
+            glm::vec4{-2.0f, 0.0f, 0.0f, 5.0f},
+            glm::vec4{1.0f, 0.0f, 0.0f, 0.0f},
+            glm::vec4{0.9f, 0.9f, 0.9f, 1.0f},
+            glm::vec4{0.0f, time, 0.0f, 0.0f}
+        )), "SMGC");
+
+        // Шар, летает вокруг губки
+        sendTask(std::make_unique<task_SmgcPushObject>(std::make_unique<Object>(
+            glm::vec4{1.0f, std::cos(time) * 2.5f, 0.0f, 5.0f + std::sin(time) * 2.5f},
+            glm::vec4{0.5f, 0.0f, 0.0f, 0.0f},
+            glm::vec4{col, 1.0f},
+            glm::vec4{0.0f}
+        )), "SMGC");
+
+        sendTask(std::make_unique<task_SmgcSwapObjects>(), "SMGC");
+        return 0;
+    }
+};
+
+int main(int argc, char *argv[]) {
+    Core core;
+    core.appendComponent(std::make_unique<Config>(argc, argv));
+    core.appendComponent(std::make_unique<SMGC>());
+    core.appendComponent(std::make_unique<Orbit>());
+
+    core.init();
+    return core.cycle();
+}
+```
+
+## Структура проекта
+
+```
+smgc/
+├── CMakeLists.txt            Сборка glad, библиотеки smgc::display3D и программы smgc
+├── shell.nix                 Окружение Nix со всеми зависимостями
+├── include/smgc/             Публичные заголовки библиотеки
+│   ├── display3D.h             Компонент SMGC и структура Camera, подключает все остальные заголовки
+│   ├── taskDefinitions.h       Задачи Clear / Push / Swap
+│   ├── ObjectsBuffer.h         Структура Object и SSBO
+│   ├── ObjectsGenerator.h      Генераторы прокси-мешей и отсечение по дальности
+│   ├── shaderClass.h           Шейдерная программа
+│   ├── VAO.h                   Vertex Array Object
+│   ├── VBO.h                   Структура Vertex и буфер вершин
+│   ├── EBO.h                   Буфер индексов
+│   └── paletts.h               Косинусные палитры
+├── src/smgc/                 Реализация библиотеки
+│   ├── display3D.cpp
+│   ├── taskDefinitions.cpp
+│   ├── ObjectsBuffer.cpp
+│   ├── ObjectsGenerator.cpp
+│   ├── shaderClass.cpp
+│   ├── VAO.cpp
+│   ├── VBO.cpp
+│   ├── EBO.cpp
+│   └── paletts.cpp
+├── example/                  Программа smgc
+│   ├── main.cpp                Точка входа: Config → SMGC → Scene
+│   ├── Scene.h
+│   └── Scene.cpp               Демо-сцена из пяти объектов типов 1, 2, 3, -1 и -2
+├── files/                    Файлы для программы, при сборке копируются в files/ рядом с ней
+│   ├── default.vert            Вертексный шейдер: ручная проекция
+│   ├── default.frag            Фрагментный шейдер: ray-marching от прокси-поверхности
+│   ├── default copy.frag       Старый полноэкранный ray-marcher (не загружается)
+│   ├── core.config             Пример конфигурации smpb
+│   └── разметка.txt            Описание полей Object
+├── third_party/glad/         Загрузчик OpenGL
+├── LICENSE
+└── README.md
+```
+
+## Лицензия
+
+[MIT](LICENSE) © 2026 Artem1123234232

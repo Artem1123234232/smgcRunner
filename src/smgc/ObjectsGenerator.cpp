@@ -1,4 +1,4 @@
-#include "ObjectsGenerator.h"
+#include <smgc/ObjectsGenerator.h>
 
 static glm::mat3 ObjectRotation(const glm::vec3& angle) {
     float cx = std::cos(angle.x), sx = std::sin(angle.x);

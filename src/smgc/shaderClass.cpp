@@ -1,4 +1,4 @@
-#include "shaderClass.h"
+#include <smgc/shaderClass.h>
 
 static bool checkShader(GLuint shader, const char* name) {
     GLint ok = 0;

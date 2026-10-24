@@ -1,4 +1,4 @@
-#include "paletts.h"
+#include <smgc/paletts.h>
 
 glm::vec3 PaletteCosinka(float t) {
     t = std::clamp(t, 0.0f, 1.0f);

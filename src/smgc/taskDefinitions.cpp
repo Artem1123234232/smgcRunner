@@ -1,4 +1,4 @@
-#include "taskDefinitions.h"
+#include <smgc/taskDefinitions.h>
 
 task_SmgcSwapObjects::task_SmgcSwapObjects(): BaseTask(0) {}
 bool taskIs_SmgcSwapObjects(uint32_t taskIdx) {
